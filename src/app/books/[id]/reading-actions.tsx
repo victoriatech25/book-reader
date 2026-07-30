@@ -18,7 +18,9 @@ export function ReadingActions({
   status: ReadingStatus;
 }) {
   const [state, formAction, pending] = useActionState(changeStatusAction, ACTION_IDLE);
-  const targets = nextStatuses(status);
+
+  // 완독은 별점·소감을 함께 받아야 해서 별도 모달(FinishDialog)이 처리한다.
+  const targets = nextStatuses(status).filter((to) => to !== "finished");
 
   if (targets.length === 0) return null;
 
