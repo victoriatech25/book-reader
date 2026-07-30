@@ -11,8 +11,8 @@ import { BookSearchError, bookSearchParamsSchema, searchKakaoBooks } from "@/lib
  * { error: { code, message } } 형태로 돌려주고, 클라이언트는 code를 보고
  * 수동 입력 폼으로 전환한다.
  *
- * TODO(W3): 세션 가드를 추가한다. 지금은 인증 계층이 없어 누구나 호출할 수
- * 있고 그만큼 카카오 쿼터가 노출된다.
+ * 인증은 프록시(src/proxy.ts)가 담당한다. 로그인하지 않은 요청은
+ * 여기까지 오지 않고 401 JSON으로 끊긴다 — 카카오 쿼터가 공개로 노출되지 않도록.
  */
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);

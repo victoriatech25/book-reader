@@ -1,16 +1,31 @@
+import { redirect } from "next/navigation";
+
+import { UserBadge } from "@/components/user-badge";
+import { getCurrentUser } from "@/lib/supabase/server";
+
 const NEXT_STEPS = [
-  { id: "U1", label: "외부 서비스 준비 (Supabase · 카카오 키 발급)" },
-  { id: "W2", label: "DB 스키마 · 마이그레이션" },
-  { id: "W3", label: "인증 · 세션" },
+  { id: "W5", label: "도서 등록 · 상태 전이" },
+  { id: "W6", label: "진행률 기록" },
+  { id: "W7", label: "완독 · 한 줄 소감 · 인용구" },
 ];
 
-export default function Home() {
+export default async function Home() {
+  const user = await getCurrentUser();
+
+  // 미들웨어가 이미 막지만, 페이지가 스스로도 확인한다.
+  // 미들웨어 matcher를 잘못 고쳐도 데이터가 새지 않도록.
+  if (!user) redirect("/login");
+
   return (
     <div className="flex flex-1 items-center justify-center bg-zinc-50 px-6 py-16 dark:bg-zinc-950">
       <main className="w-full max-w-xl">
-        <p className="font-mono text-xs tracking-widest text-zinc-500 uppercase dark:text-zinc-400">
-          W0 · 툴체인 셋업 완료
-        </p>
+        <div className="flex items-baseline justify-between gap-4">
+          <p className="font-mono text-xs tracking-widest text-zinc-500 uppercase dark:text-zinc-400">
+            W3 · 인증 완료
+          </p>
+          <UserBadge email={user.email ?? "(이메일 없음)"} />
+        </div>
+
         <h1 className="mt-3 text-3xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
           book-reader
         </h1>
