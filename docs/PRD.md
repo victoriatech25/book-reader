@@ -94,144 +94,36 @@ erDiagram
     profiles ||--o{ goals : sets
 ```
 
-```sql
--- 사용자 (Supabase auth.users 확장)
-create table profiles (
-  id uuid primary key references auth.users on delete cascade,
-  display_name text,
-  timezone text default 'Asia/Seoul',
-  created_at timestamptz default now()
-);
+> **정본은 [`supabase/migrations/0001_init.sql`](../supabase/migrations/0001_init.sql)이다.** 아래는 요약이고, 컬럼 정의·제약·RLS 정책의 실제 내용은 마이그레이션 파일을 본다. SQL을 두 곳에 두면 반드시 어긋난다.
 
--- 분야 (프리셋은 user_id null로 전역 시드, 사용자 추가분은 user_id 있음)
-create table categories (
-  id uuid primary key default gen_random_uuid(),
-  user_id uuid references profiles(id) on delete cascade,
-  name text not null,
-  color text,              -- 차트/배지 색상 (hex)
-  sort_order int default 0,
-  unique (user_id, name)
-);
+| 테이블                    | 역할                                                                 |
+| ------------------------- | -------------------------------------------------------------------- |
+| `profiles`                | `auth.users` 1:1 확장. 가입 트리거가 자동 생성                       |
+| `categories`              | 분야(단일 선택). 가입 시 프리셋 12종을 **사용자 소유 행으로 복사**   |
+| `books`                   | 도서 마스터. 형태 기본값 `ebook`                                     |
+| `readings`                | 독서 시도 1건. 재독하면 `attempt_no + 1` 행을 추가                   |
+| `progress_logs`           | 진행 기록. 스트릭·속도·히트맵의 원천 데이터                          |
+| `notes`                   | 인용 / 생각 / 질문. `location` 단위는 소속 reading의 `progress_unit` |
+| `tags` · `book_tags`      | 자유 태그(다중)                                                      |
+| `shelves` · `shelf_books` | 임의 컬렉션                                                          |
+| `goals`                   | 연간/월간 목표. `metric` = `books` \| `minutes`                      |
 
--- 도서 마스터
-create table books (
-  id uuid primary key default gen_random_uuid(),
-  user_id uuid not null references profiles(id) on delete cascade,
-  title text not null,
-  subtitle text,
-  authors text[] default '{}',
-  translators text[] default '{}',
-  publisher text,
-  published_on date,
-  isbn13 text,
-  cover_url text,               -- 외부 URL 또는 Supabase Storage 경로
-  total_pages int,              -- 종이책만 필수. 전자책은 null 허용(% 기록)
-  format text default 'ebook',  -- ebook | paper  (기본값: 전자책)
-  ownership text default 'own', -- own | library | subscription | borrowed
-  category_id uuid references categories(id) on delete set null,
-  source text default 'manual', -- manual | kakao | aladin
-  source_ref jsonb,             -- 원본 API 응답 일부 보관 (재조회/디버깅용)
-  memo text,                    -- 책 자체에 대한 메모(독서 세션과 무관)
-  created_at timestamptz default now(),
-  updated_at timestamptz default now()
-);
-create index on books (user_id, updated_at desc);
-create unique index on books (user_id, isbn13) where isbn13 is not null;
+**스키마가 강제하는 규칙**
 
--- 독서 시도(세션). 재독하면 레코드가 하나 더 생긴다.
-create table readings (
-  id uuid primary key default gen_random_uuid(),
-  user_id uuid not null references profiles(id) on delete cascade,
-  book_id uuid not null references books(id) on delete cascade,
-  attempt_no int not null default 1,
-  status text not null default 'want',   -- want|reading|paused|finished|dropped
-  progress_unit text default 'percent',  -- percent(전자책) | page(종이책)
-  current_value int default 0,           -- unit 기준 현재 위치 (percent면 0~100)
-  target_value int,                      -- percent면 100, page면 books.total_pages 복사
-  started_at timestamptz,
-  finished_at timestamptz,
-  dropped_at timestamptz,
-  drop_reason text,
-  rating numeric(2,1),                   -- 0.5 ~ 5.0 (0.5 단위)
-  review text,                           -- 한 줄 소감 (평문, 최대 500자)
-  review_is_private boolean default true,
-  spoiler boolean default false,
-  due_on date,                           -- 도서관 반납일 / 목표 완독일
-  created_at timestamptz default now(),
-  updated_at timestamptz default now(),
-  unique (book_id, attempt_no)
-);
-create index on readings (user_id, status, updated_at desc);
+- **RLS 전 테이블 활성화.** `user_id = (select auth.uid())` 단일 조건. 조인 테이블(`book_tags`, `shelf_books`)은 `user_id`를 두지 않고 부모의 소유권을 `exists`로 따라간다.
+- 소감 500자 · 별점 0.5 배수 · ISBN13 13자리 · 색상 `#rrggbb` · 목표 기간키 `2026`/`2026-07`
+- `percent` 단위면 `target_value = 100`, `page` 단위면 `target_value` 필수
+- 상태-날짜 정합성: `finished` ↔ `finished_at`, `dropped` ↔ `dropped_at`, `want`이 아니면 `started_at` 필수
+- **`record_progress()` RPC**가 `progress_logs` insert와 `readings.current_value` 갱신을 한 트랜잭션으로 묶는다. 완독/중단 상태에는 기록을 거부하고, `want`/`paused`에서 기록하면 `reading`으로 승격한다. 100%에 도달해도 **완독 판정은 하지 않는다**(§2.2).
 
--- 진행 기록 (타임라인의 원천 데이터)
-create table progress_logs (
-  id uuid primary key default gen_random_uuid(),
-  user_id uuid not null references profiles(id) on delete cascade,
-  reading_id uuid not null references readings(id) on delete cascade,
-  logged_on date not null default current_date,
-  value_from int,
-  value_to int not null,
-  minutes int,                -- 읽은 시간 (타이머 또는 수동)
-  memo text,
-  created_at timestamptz default now()
-);
-create index on progress_logs (user_id, logged_on desc);
+**PRD 초안에서 바뀐 점** (W2 · G1 승인 · 2026-07-30)
 
--- 노트: 인용 / 생각 / 질문
-create table notes (
-  id uuid primary key default gen_random_uuid(),
-  user_id uuid not null references profiles(id) on delete cascade,
-  reading_id uuid not null references readings(id) on delete cascade,
-  kind text not null default 'quote',  -- quote | thought | question
-  page int,
-  body text not null,
-  is_favorite boolean default false,
-  created_at timestamptz default now()
-);
-
--- 태그
-create table tags (
-  id uuid primary key default gen_random_uuid(),
-  user_id uuid not null references profiles(id) on delete cascade,
-  name text not null,
-  unique (user_id, name)
-);
-create table book_tags (
-  book_id uuid references books(id) on delete cascade,
-  tag_id uuid references tags(id) on delete cascade,
-  primary key (book_id, tag_id)
-);
-
--- 서재(컬렉션)
-create table shelves (
-  id uuid primary key default gen_random_uuid(),
-  user_id uuid not null references profiles(id) on delete cascade,
-  name text not null,
-  description text,
-  sort_order int default 0
-);
-create table shelf_books (
-  shelf_id uuid references shelves(id) on delete cascade,
-  book_id uuid references books(id) on delete cascade,
-  sort_order int default 0,
-  primary key (shelf_id, book_id)
-);
-
--- 목표
-create table goals (
-  id uuid primary key default gen_random_uuid(),
-  user_id uuid not null references profiles(id) on delete cascade,
-  period text not null,        -- year | month
-  period_key text not null,    -- '2026' | '2026-07'
-  metric text not null default 'books', -- books | pages | minutes
-  target int not null,
-  unique (user_id, period, period_key, metric)
-);
-```
-
-모든 테이블에 RLS를 켜고 `user_id = auth.uid()` 정책 하나씩. `categories`만 `user_id is null or user_id = auth.uid()` (프리셋 읽기 허용).
-
-`review`에는 `check (char_length(review) <= 500)` 제약을 건다. 길이를 스키마에서 막아두면 UI가 흔들려도 데이터 성격이 유지된다.
+1. **분야 프리셋을 전역 공유 → 사용자별 복사.** 전역 행이면 프리셋 12종만 이름·색상·순서를 못 고쳐 W8의 분야 편집과 어긋난다. 사용자 소유 행으로 두면 RLS도 단일 조건으로 통일된다.
+2. **종이책 페이지수 필수를 `books` → `readings`로 이동.** 위시리스트에 담는 시점엔 분량을 모를 수 있다. 실제 요구는 "페이지 단위로 기록하려면 분량이 있어야 한다"이므로 `progress_unit = 'page'`일 때만 강제한다.
+3. **`notes.page` → `notes.location`.** 전자책은 인용 위치가 %다.
+4. **프리셋 시드에 색상을 넣지 않는다.** `color = null`이면 앱이 팔레트에서 배정하고, 값이 있으면 사용자 지정이다. DB 시드에 hex를 박으면 팔레트 교체가 데이터 마이그레이션이 된다.
+5. **`auth.users → profiles` 트리거를 W3 → W2로 이동.** DB 객체는 스키마 단위에 모아야 마이그레이션이 하나로 끝난다.
+6. **`goals.metric`에서 `pages` 제거** (§3.1 F10에서 이미 결정).
 
 ### 2.4 파생 값 (저장하지 않고 계산)
 

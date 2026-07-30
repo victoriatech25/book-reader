@@ -14,7 +14,10 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
-    "verify": "pnpm typecheck && pnpm lint && pnpm test && pnpm build"
+    "verify": "pnpm typecheck && pnpm lint && pnpm test && pnpm build",
+    "db:push": "supabase db push",
+    "verify:rls": "node scripts/verify-rls.mjs",
+    "db:types": "supabase gen types typescript --linked > src/types/database.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.6.0",
@@ -43,6 +46,7 @@
     "jsdom": "^30.0.0",
     "prettier": "^3.9.6",
     "prettier-plugin-tailwindcss": "^0.8.1",
+    "supabase": "^2.110.0",
     "tailwindcss": "^4",
     "typescript": "^5",
     "vitest": "^4.1.10"
