@@ -5,6 +5,7 @@
  *   2) CRUD 왕복: books → readings → record_progress()
  *   3) RLS 격리: 사용자 B가 A의 데이터를 조회/수정/삭제/RPC 호출할 수 없는가
  *   4) 제약: 소감 500자, 별점 0.5 배수, percent 단위의 target_value=100
+ *   5) 재독: attempt_no 증가와 (book_id, attempt_no) 유일성, 이전 회차 보존
  *
  * 외부 의존성 없이 Data API(PostgREST)와 Auth API를 직접 호출한다.
  * PostgREST를 그대로 때리므로 앱이 나중에 쓰게 될 경로와 동일한 층을 검증한다.
@@ -403,6 +404,55 @@ async function main() {
     "다른 사용자가 같은 ISBN13 → 허용",
     sameIsbnOtherUser.ok,
     `status=${sameIsbnOtherUser.status}`,
+  );
+
+  // -- 5. 재독 (W5) ---------------------------------------------------------
+  section("5. 재독 — attempt_no");
+
+  const secondAttempt = await rest("/readings", {
+    method: "POST",
+    token: a.token,
+    body: {
+      user_id: a.id,
+      book_id: bookId,
+      attempt_no: 2,
+      progress_unit: "percent",
+      target_value: 100,
+    },
+  });
+  check("완독한 책에 2회독 추가 → 허용", secondAttempt.ok, `status=${secondAttempt.status}`);
+
+  const duplicateAttempt = await rest("/readings", {
+    method: "POST",
+    token: a.token,
+    body: {
+      user_id: a.id,
+      book_id: bookId,
+      attempt_no: 2,
+      progress_unit: "percent",
+      target_value: 100,
+    },
+  });
+  check("같은 회차 번호 중복 → 거부", !duplicateAttempt.ok, `status=${duplicateAttempt.status}`);
+
+  const attempts = await rest(
+    `/readings?select=attempt_no,status&book_id=eq.${bookId}&order=attempt_no`,
+    { token: a.token },
+  );
+  check(
+    "1회독 기록이 그대로 남아 있다",
+    attempts.body?.length === 2,
+    `rows=${attempts.body?.length}`,
+  );
+  check(
+    "1회독은 완독 상태를 유지한다",
+    attempts.body?.[0]?.status === "finished",
+    String(attempts.body?.[0]?.status),
+  );
+  check(
+    "2회독은 want로 시작한다",
+    attempts.body?.[1]?.status === "want",
+    String(attempts.body?.[1]?.status),
   );
 }
 
