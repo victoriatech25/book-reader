@@ -6,6 +6,15 @@ import { redirect } from "next/navigation";
 import { readBookForm } from "@/lib/books/schema";
 import { checkMinutes, checkProgress } from "@/lib/progress";
 import {
+  checkNoteBody,
+  checkNoteLocation,
+  checkRating,
+  checkReview,
+  isNoteKind,
+  normalizeText,
+  parseRating,
+} from "@/lib/reviews";
+import {
   buildStatusPatch,
   initialProgress,
   InvalidTransitionError,
@@ -15,7 +24,7 @@ import {
 } from "@/lib/reading-status";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
-import { ACTION_IDLE, type ActionState } from "./action-state";
+import { ACTION_IDLE, actionSaved, type ActionState } from "./action-state";
 
 /** RLS가 이미 막지만, 액션도 스스로 세션을 확인한다. */
 async function requireUser() {
@@ -179,6 +188,186 @@ export async function changeStatusAction(
   revalidatePath("/");
   revalidatePath(`/books/${reading.book_id}`);
   return ACTION_IDLE;
+}
+
+// ---------------------------------------------------------------------------
+// 완독 · 소감
+// ---------------------------------------------------------------------------
+
+/** 폼에서 별점·소감·스포일러를 읽고 검증한다. 완독과 소감 수정이 함께 쓴다. */
+function readReviewFields(formData: FormData) {
+  const rating = parseRating(formData.get("rating"));
+  const ratingCheck = checkRating(rating);
+  if (!ratingCheck.ok) return { error: ratingCheck.message } as const;
+
+  const review = normalizeText(formData.get("review"));
+  const reviewCheck = checkReview(review);
+  if (!reviewCheck.ok) return { error: reviewCheck.message } as const;
+
+  return {
+    error: null,
+    fields: { rating, review, spoiler: formData.get("spoiler") === "on" },
+  } as const;
+}
+
+/**
+ * 완독 처리와 소감을 한 번에 저장한다 (PRD §3.1 F5).
+ *
+ * 완독 버튼과 소감 작성을 두 단계로 나누면 소감을 건너뛰게 된다. 상태 전이와
+ * 같은 트랜잭션(단일 update)으로 묶어 한 화면에서 끝낸다.
+ */
+export async function finishReadingAction(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const { supabase } = await requireUser();
+
+  const readingId = formData.get("reading_id");
+  if (typeof readingId !== "string") return { error: "잘못된 요청입니다." };
+
+  const parsed = readReviewFields(formData);
+  if (parsed.error !== null) return { error: parsed.error };
+
+  const { data: reading, error: loadError } = await supabase
+    .from("readings")
+    .select("id, book_id, status, started_at, finished_at, dropped_at")
+    .eq("id", readingId)
+    .single();
+
+  if (loadError || !reading) return { error: "독서 기록을 찾을 수 없습니다." };
+
+  let patch;
+  try {
+    patch = buildStatusPatch(
+      {
+        status: reading.status as ReadingStatus,
+        started_at: reading.started_at,
+        finished_at: reading.finished_at,
+        dropped_at: reading.dropped_at,
+      },
+      "finished",
+    );
+  } catch (error) {
+    if (error instanceof InvalidTransitionError) return { error: error.message };
+    throw error;
+  }
+
+  const { error } = await supabase
+    .from("readings")
+    .update({ ...patch, ...parsed.fields })
+    .eq("id", readingId);
+
+  if (error) return { error: toMessage(error) };
+
+  revalidatePath("/");
+  revalidatePath(`/books/${reading.book_id}`);
+  return ACTION_IDLE;
+}
+
+/** 완독 후 소감·별점만 고친다. 상태는 건드리지 않는다. */
+export async function updateReviewAction(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const { supabase } = await requireUser();
+
+  const readingId = formData.get("reading_id");
+  const bookId = formData.get("book_id");
+  if (typeof readingId !== "string" || typeof bookId !== "string") {
+    return { error: "잘못된 요청입니다." };
+  }
+
+  const parsed = readReviewFields(formData);
+  if (parsed.error !== null) return { error: parsed.error };
+
+  const { error } = await supabase.from("readings").update(parsed.fields).eq("id", readingId);
+  if (error) return { error: toMessage(error) };
+
+  revalidatePath("/");
+  revalidatePath(`/books/${bookId}`);
+  return ACTION_IDLE;
+}
+
+// ---------------------------------------------------------------------------
+// 인용구 · 메모
+// ---------------------------------------------------------------------------
+export async function createNoteAction(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const { supabase, user } = await requireUser();
+
+  const readingId = formData.get("reading_id");
+  const kind = formData.get("kind");
+  if (typeof readingId !== "string" || !isNoteKind(kind)) {
+    return { error: "잘못된 요청입니다." };
+  }
+
+  const { data: reading, error: loadError } = await supabase
+    .from("readings")
+    .select("id, book_id, progress_unit, target_value")
+    .eq("id", readingId)
+    .single();
+
+  if (loadError || !reading) return { error: "독서 기록을 찾을 수 없습니다." };
+
+  const body = normalizeText(formData.get("body"));
+  const bodyCheck = checkNoteBody(body);
+  if (!bodyCheck.ok) return { error: bodyCheck.message };
+
+  const rawLocation = normalizeText(formData.get("location"));
+  const location = rawLocation === null ? null : Number(rawLocation);
+  const locationCheck = checkNoteLocation(
+    location,
+    reading.progress_unit as ProgressUnit,
+    reading.target_value,
+  );
+  if (!locationCheck.ok) return { error: locationCheck.message };
+
+  const { error } = await supabase.from("notes").insert({
+    user_id: user.id,
+    reading_id: readingId,
+    kind,
+    location,
+    body: body as string,
+  });
+
+  if (error) return { error: toMessage(error) };
+
+  revalidatePath(`/books/${reading.book_id}`);
+  return actionSaved();
+}
+
+export async function toggleNoteFavoriteAction(formData: FormData): Promise<void> {
+  const { supabase } = await requireUser();
+
+  const noteId = formData.get("note_id");
+  const bookId = formData.get("book_id");
+  if (typeof noteId !== "string" || typeof bookId !== "string") return;
+
+  const { data: note } = await supabase
+    .from("notes")
+    .select("id, is_favorite")
+    .eq("id", noteId)
+    .single();
+
+  if (!note) return;
+
+  await supabase.from("notes").update({ is_favorite: !note.is_favorite }).eq("id", noteId);
+
+  revalidatePath(`/books/${bookId}`);
+}
+
+export async function deleteNoteAction(formData: FormData): Promise<void> {
+  const { supabase } = await requireUser();
+
+  const noteId = formData.get("note_id");
+  const bookId = formData.get("book_id");
+  if (typeof noteId !== "string" || typeof bookId !== "string") return;
+
+  await supabase.from("notes").delete().eq("id", noteId);
+
+  revalidatePath(`/books/${bookId}`);
 }
 
 // ---------------------------------------------------------------------------

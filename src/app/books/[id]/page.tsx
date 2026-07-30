@@ -1,18 +1,22 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { deleteBookAction } from "@/app/books/actions";
+import { deleteBookAction, deleteNoteAction, toggleNoteFavoriteAction } from "@/app/books/actions";
 import { FORMAT_LABEL, OWNERSHIP_LABEL } from "@/lib/books/schema";
 import { formatDate } from "@/lib/format";
 import { formatDelta, formatProgress, progressPercent } from "@/lib/progress";
 import {
+  canTransition,
   isTerminal,
   STATUS_LABEL,
   type ProgressUnit,
   type ReadingStatus,
 } from "@/lib/reading-status";
+import { formatNoteLocation, formatRating, NOTE_KIND_LABEL, type NoteKind } from "@/lib/reviews";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
+import { FinishDialog, ReviewEditor } from "./finish-dialog";
+import { NoteForm } from "./note-form";
 import { ProgressForm } from "./progress-form";
 import { NewAttemptButton, ReadingActions } from "./reading-actions";
 
@@ -34,7 +38,7 @@ export default async function BookDetailPage({ params }: { params: Promise<{ id:
   const { data: readings } = await supabase
     .from("readings")
     .select(
-      "id, attempt_no, status, progress_unit, current_value, target_value, started_at, finished_at, dropped_at, drop_reason, rating, review",
+      "id, attempt_no, status, progress_unit, current_value, target_value, started_at, finished_at, dropped_at, drop_reason, rating, review, spoiler",
     )
     .eq("book_id", id)
     .order("attempt_no", { ascending: false });
@@ -58,6 +62,24 @@ export default async function BookDetailPage({ params }: { params: Promise<{ id:
     const list = logsByReading.get(log.reading_id) ?? [];
     list.push(log);
     logsByReading.set(log.reading_id, list);
+  }
+
+  const { data: notes } = await supabase
+    .from("notes")
+    .select("id, reading_id, kind, location, body, is_favorite, created_at")
+    .in(
+      "reading_id",
+      attempts.map((attempt) => attempt.id),
+    )
+    // 즐겨찾기를 위로 올린다. 다시 꺼내 보려고 표시한 문장들이다.
+    .order("is_favorite", { ascending: false })
+    .order("created_at", { ascending: false });
+
+  const notesByReading = new Map<string, NonNullable<typeof notes>>();
+  for (const note of notes ?? []) {
+    const list = notesByReading.get(note.reading_id) ?? [];
+    list.push(note);
+    notesByReading.set(note.reading_id, list);
   }
 
   const meta = [
@@ -135,6 +157,7 @@ export default async function BookDetailPage({ params }: { params: Promise<{ id:
             const percent = progressPercent(reading.current_value, reading.target_value);
             const unitLabel = formatProgress(reading.current_value, unit, reading.target_value);
             const timeline = logsByReading.get(reading.id) ?? [];
+            const readingNotes = notesByReading.get(reading.id) ?? [];
 
             return (
               <li
@@ -178,7 +201,36 @@ export default async function BookDetailPage({ params }: { params: Promise<{ id:
                   </p>
                 )}
 
+                {(reading.rating !== null || reading.review) && (
+                  <div className="mt-3 rounded-md bg-zinc-50 px-3 py-2 dark:bg-zinc-950">
+                    <p className="font-mono text-sm text-zinc-900 dark:text-zinc-50">
+                      {formatRating(reading.rating)}
+                    </p>
+                    {reading.review && (
+                      <p className="mt-1 text-sm whitespace-pre-wrap text-zinc-700 dark:text-zinc-300">
+                        {reading.review}
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                <div className="mt-3 flex flex-wrap items-center gap-2">
+                  {canTransition(reading.status as ReadingStatus, "finished") && (
+                    <FinishDialog readingId={reading.id} />
+                  )}
+                </div>
+
                 <ReadingActions readingId={reading.id} status={reading.status as ReadingStatus} />
+
+                {reading.status === "finished" && (
+                  <ReviewEditor
+                    readingId={reading.id}
+                    bookId={book.id}
+                    rating={reading.rating}
+                    review={reading.review}
+                    spoiler={reading.spoiler}
+                  />
+                )}
 
                 {!isTerminal(reading.status as ReadingStatus) && (
                   <ProgressForm
@@ -216,6 +268,62 @@ export default async function BookDetailPage({ params }: { params: Promise<{ id:
                     </ol>
                   </details>
                 )}
+
+                <div className="mt-4 border-t border-zinc-200 pt-3 dark:border-zinc-800">
+                  <h3 className="text-xs font-medium text-zinc-900 dark:text-zinc-100">
+                    인용구 · 메모 {readingNotes.length > 0 && `(${readingNotes.length})`}
+                  </h3>
+
+                  {readingNotes.length > 0 && (
+                    <ul className="mt-2 space-y-2">
+                      {readingNotes.map((note) => (
+                        <li
+                          key={note.id}
+                          className="rounded-md border border-zinc-200 px-3 py-2 dark:border-zinc-800"
+                        >
+                          <div className="flex items-baseline justify-between gap-2">
+                            <span className="font-mono text-xs text-zinc-500 dark:text-zinc-400">
+                              {NOTE_KIND_LABEL[note.kind as NoteKind]}
+                              {note.location !== null &&
+                                ` · ${formatNoteLocation(note.location, unit)}`}
+                            </span>
+                            <span className="flex shrink-0 items-center gap-2">
+                              <form action={toggleNoteFavoriteAction}>
+                                <input type="hidden" name="note_id" value={note.id} />
+                                <input type="hidden" name="book_id" value={book.id} />
+                                <button
+                                  type="submit"
+                                  aria-label={
+                                    note.is_favorite ? "즐겨찾기 해제" : "즐겨찾기에 추가"
+                                  }
+                                  className="text-sm text-zinc-400 hover:text-amber-500"
+                                >
+                                  {note.is_favorite ? "★" : "☆"}
+                                </button>
+                              </form>
+                              <form action={deleteNoteAction}>
+                                <input type="hidden" name="note_id" value={note.id} />
+                                <input type="hidden" name="book_id" value={book.id} />
+                                <button
+                                  type="submit"
+                                  aria-label="인용구 삭제"
+                                  className="text-xs text-zinc-400 hover:text-red-600"
+                                >
+                                  삭제
+                                </button>
+                              </form>
+                            </span>
+                          </div>
+                          <p className="mt-1 text-sm whitespace-pre-wrap text-zinc-800 dark:text-zinc-200">
+                            {note.body}
+                          </p>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+
+                  <NoteForm readingId={reading.id} unit={unit} target={reading.target_value} />
+                </div>
               </li>
             );
           })}

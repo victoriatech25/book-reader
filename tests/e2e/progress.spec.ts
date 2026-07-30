@@ -5,23 +5,27 @@ import { createTestUser, deleteTestUser, type TestUser } from "./support/supabas
 
 test.describe.serial("진행률 기록", () => {
   let user: TestUser;
+  let page: Page;
 
-  test.beforeAll(async () => {
+  // 파일당 한 번만 로그인하고 페이지를 공유한다 (books.spec.ts와 같은 이유).
+  test.beforeAll(async ({ browser }) => {
     user = await createTestUser("progress");
+    page = await browser.newPage();
+    await loginAs(page, user.email);
+    await page.waitForURL("/");
   });
 
   test.afterAll(async () => {
+    await page?.close();
     if (user) await deleteTestUser(user.id);
-  });
-
-  test.beforeEach(async ({ page }) => {
-    await loginAs(page, user.email);
   });
 
   async function registerBook(page: Page, title: string, paperPages?: number) {
     await page.goto("/books/new");
     await page.getByRole("button", { name: "검색 없이 직접 입력하기" }).click();
+    // 값이 실제로 들어간 뒤 제출한다. 유실되면 required가 막아 원인을 알기 어렵다.
     await page.getByLabel("제목").fill(title);
+    await expect(page.getByLabel("제목")).toHaveValue(title);
 
     if (paperPages) {
       // "소장 형태"와 겹치지 않도록 정확히 일치시킨다.
@@ -33,7 +37,7 @@ test.describe.serial("진행률 기록", () => {
     await expect(page).toHaveURL(/\/books\/[0-9a-f-]{36}$/);
   }
 
-  test("전자책은 %로 기록하고, want 상태는 읽는 중으로 자동 승격된다", async ({ page }) => {
+  test("전자책은 %로 기록하고, want 상태는 읽는 중으로 자동 승격된다", async () => {
     await registerBook(page, "진행률 전자책");
     await expect(page.getByText("1회독 · 읽고 싶은")).toBeVisible();
 
@@ -52,7 +56,7 @@ test.describe.serial("진행률 기록", () => {
     await expect(page.getByText("1장까지")).toBeVisible();
   });
 
-  test("종이책은 쪽수로 기록한다", async ({ page }) => {
+  test("종이책은 쪽수로 기록한다", async () => {
     await registerBook(page, "진행률 종이책", 480);
 
     await page.getByLabel("현재 쪽").first().fill("120");
@@ -63,7 +67,7 @@ test.describe.serial("진행률 기록", () => {
     await expect(page.locator('div[style*="width: 25%"]')).toBeVisible();
   });
 
-  test("전체 분량을 넘는 값은 거부하고 사유를 보여준다", async ({ page }) => {
+  test("전체 분량을 넘는 값은 거부하고 사유를 보여준다", async () => {
     await registerBook(page, "상한 검증용", 300);
 
     // max 속성을 우회해 서버까지 보낸다 — 검증은 서버가 최종 판정한다.
@@ -80,7 +84,7 @@ test.describe.serial("진행률 기록", () => {
     await expect(page.getByText("0 / 300쪽")).toBeVisible();
   });
 
-  test("되돌아가는 입력은 경고를 띄우되 막지는 않는다", async ({ page }) => {
+  test("되돌아가는 입력은 경고를 띄우되 막지는 않는다", async () => {
     await registerBook(page, "되돌리기 검증용");
 
     await page.getByLabel("진행률 (%)").first().fill("50");
@@ -97,7 +101,7 @@ test.describe.serial("진행률 기록", () => {
     await expect(page.getByText("50% → 40%")).toBeVisible();
   });
 
-  test("홈의 빠른 기록으로 페이지 이동 없이 진행을 남긴다", async ({ page }) => {
+  test("홈의 빠른 기록으로 페이지 이동 없이 진행을 남긴다", async () => {
     await registerBook(page, "빠른 기록 검증용");
     await page.getByRole("button", { name: "읽기 시작" }).click();
     await expect(page.getByText("1회독 · 읽는 중")).toBeVisible();
