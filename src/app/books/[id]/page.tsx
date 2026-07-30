@@ -3,10 +3,17 @@ import { notFound } from "next/navigation";
 
 import { deleteBookAction } from "@/app/books/actions";
 import { FORMAT_LABEL, OWNERSHIP_LABEL } from "@/lib/books/schema";
-import { formatDate, progressPercent } from "@/lib/format";
-import { isTerminal, STATUS_LABEL, type ReadingStatus } from "@/lib/reading-status";
+import { formatDate } from "@/lib/format";
+import { formatDelta, formatProgress, progressPercent } from "@/lib/progress";
+import {
+  isTerminal,
+  STATUS_LABEL,
+  type ProgressUnit,
+  type ReadingStatus,
+} from "@/lib/reading-status";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
+import { ProgressForm } from "./progress-form";
 import { NewAttemptButton, ReadingActions } from "./reading-actions";
 
 export default async function BookDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -35,6 +42,23 @@ export default async function BookDetailPage({ params }: { params: Promise<{ id:
   const attempts = readings ?? [];
   const latest = attempts[0];
   const canStartNewAttempt = latest ? isTerminal(latest.status as ReadingStatus) : true;
+
+  const { data: logs } = await supabase
+    .from("progress_logs")
+    .select("id, reading_id, logged_on, value_from, value_to, minutes, memo, created_at")
+    .in(
+      "reading_id",
+      attempts.map((attempt) => attempt.id),
+    )
+    .order("logged_on", { ascending: false })
+    .order("created_at", { ascending: false });
+
+  const logsByReading = new Map<string, NonNullable<typeof logs>>();
+  for (const log of logs ?? []) {
+    const list = logsByReading.get(log.reading_id) ?? [];
+    list.push(log);
+    logsByReading.set(log.reading_id, list);
+  }
 
   const meta = [
     book.authors.length > 0 ? book.authors.join(", ") : null,
@@ -107,11 +131,10 @@ export default async function BookDetailPage({ params }: { params: Promise<{ id:
 
         <ul className="mt-3 space-y-4">
           {attempts.map((reading) => {
+            const unit = reading.progress_unit as ProgressUnit;
             const percent = progressPercent(reading.current_value, reading.target_value);
-            const unitLabel =
-              reading.progress_unit === "page"
-                ? `${reading.current_value} / ${reading.target_value ?? "?"}쪽`
-                : `${reading.current_value}%`;
+            const unitLabel = formatProgress(reading.current_value, unit, reading.target_value);
+            const timeline = logsByReading.get(reading.id) ?? [];
 
             return (
               <li
@@ -156,6 +179,43 @@ export default async function BookDetailPage({ params }: { params: Promise<{ id:
                 )}
 
                 <ReadingActions readingId={reading.id} status={reading.status as ReadingStatus} />
+
+                {!isTerminal(reading.status as ReadingStatus) && (
+                  <ProgressForm
+                    readingId={reading.id}
+                    unit={unit}
+                    current={reading.current_value}
+                    target={reading.target_value}
+                  />
+                )}
+
+                {timeline.length > 0 && (
+                  <details className="mt-4 border-t border-zinc-200 pt-3 dark:border-zinc-800">
+                    <summary className="cursor-pointer text-xs text-zinc-500 dark:text-zinc-400">
+                      진행 기록 {timeline.length}건
+                    </summary>
+                    <ol className="mt-2 space-y-1.5">
+                      {timeline.map((log) => (
+                        <li key={log.id} className="flex flex-wrap items-baseline gap-x-2 text-xs">
+                          <span className="font-mono text-zinc-500 dark:text-zinc-400">
+                            {formatDate(log.logged_on)}
+                          </span>
+                          <span className="font-mono text-zinc-800 dark:text-zinc-200">
+                            {formatDelta(log.value_from, log.value_to, unit)}
+                          </span>
+                          {log.minutes !== null && (
+                            <span className="text-zinc-500 dark:text-zinc-400">
+                              {log.minutes}분
+                            </span>
+                          )}
+                          {log.memo && (
+                            <span className="text-zinc-600 dark:text-zinc-400">{log.memo}</span>
+                          )}
+                        </li>
+                      ))}
+                    </ol>
+                  </details>
+                )}
               </li>
             );
           })}
