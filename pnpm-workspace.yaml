@@ -1,0 +1,5 @@
+allowBuilds:
+  # Next.js 이미지 최적화용 네이티브 바이너리
+  sharp: true
+  # ESLint import 해석용 네이티브 바인딩
+  unrs-resolver: true

@@ -4,14 +4,14 @@
 
 ## 문서
 
-| 문서 | 내용 |
-|---|---|
-| [docs/PRD.md](docs/PRD.md) | 기획서 — 목표, 데이터 모델, 기능 명세, 화면 설계, 기술 아키텍처 |
+| 문서                                 | 내용                                                               |
+| ------------------------------------ | ------------------------------------------------------------------ |
+| [docs/PRD.md](docs/PRD.md)           | 기획서 — 목표, 데이터 모델, 기능 명세, 화면 설계, 기술 아키텍처    |
 | [docs/WORKPLAN.md](docs/WORKPLAN.md) | 작업계획서 — 작업 단위(W), 검증 레벨(V), 컨펌 게이트(G), 실행 규약 |
 
 ## 기술 스택
 
-- Next.js 15 (App Router) + TypeScript
+- Next.js 16 (App Router, Turbopack) + React 19 + TypeScript
 - Tailwind CSS + shadcn/ui
 - Supabase (Postgres + Auth + Storage, RLS)
 - Recharts · React Hook Form + Zod
