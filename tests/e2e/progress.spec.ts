@@ -1,0 +1,115 @@
+import { expect, test, type Page } from "@playwright/test";
+
+import { loginAs } from "./support/session";
+import { createTestUser, deleteTestUser, type TestUser } from "./support/supabase-admin";
+
+test.describe.serial("진행률 기록", () => {
+  let user: TestUser;
+
+  test.beforeAll(async () => {
+    user = await createTestUser("progress");
+  });
+
+  test.afterAll(async () => {
+    if (user) await deleteTestUser(user.id);
+  });
+
+  test.beforeEach(async ({ page }) => {
+    await loginAs(page, user.email);
+  });
+
+  async function registerBook(page: Page, title: string, paperPages?: number) {
+    await page.goto("/books/new");
+    await page.getByRole("button", { name: "검색 없이 직접 입력하기" }).click();
+    await page.getByLabel("제목").fill(title);
+
+    if (paperPages) {
+      // "소장 형태"와 겹치지 않도록 정확히 일치시킨다.
+      await page.getByLabel("형태", { exact: true }).selectOption("paper");
+      await page.getByLabel("페이지수").fill(String(paperPages));
+    }
+
+    await page.getByRole("button", { name: "서재에 담기" }).click();
+    await expect(page).toHaveURL(/\/books\/[0-9a-f-]{36}$/);
+  }
+
+  test("전자책은 %로 기록하고, want 상태는 읽는 중으로 자동 승격된다", async ({ page }) => {
+    await registerBook(page, "진행률 전자책");
+    await expect(page.getByText("1회독 · 읽고 싶은")).toBeVisible();
+
+    await page.getByLabel("진행률 (%)").first().fill("30");
+    await page.getByLabel("읽은 시간 (분)").first().fill("25");
+    await page.getByPlaceholder("한 줄 메모 (선택)").fill("1장까지");
+    await page.getByRole("button", { name: "기록", exact: true }).click();
+
+    // RPC가 want → reading 으로 올리고 시작일을 찍는다.
+    await expect(page.getByText("1회독 · 읽는 중")).toBeVisible();
+    await expect(page.getByText("30%", { exact: true })).toBeVisible();
+
+    await page.getByText("진행 기록 1건").click();
+    await expect(page.getByText("0% → 30%")).toBeVisible();
+    await expect(page.getByText("25분")).toBeVisible();
+    await expect(page.getByText("1장까지")).toBeVisible();
+  });
+
+  test("종이책은 쪽수로 기록한다", async ({ page }) => {
+    await registerBook(page, "진행률 종이책", 480);
+
+    await page.getByLabel("현재 쪽").first().fill("120");
+    await page.getByRole("button", { name: "기록", exact: true }).click();
+
+    await expect(page.getByText("120 / 480쪽")).toBeVisible();
+    // 상세 화면은 진행률을 숫자가 아니라 막대 폭으로 보여준다. 120/480 = 25%.
+    await expect(page.locator('div[style*="width: 25%"]')).toBeVisible();
+  });
+
+  test("전체 분량을 넘는 값은 거부하고 사유를 보여준다", async ({ page }) => {
+    await registerBook(page, "상한 검증용", 300);
+
+    // max 속성을 우회해 서버까지 보낸다 — 검증은 서버가 최종 판정한다.
+    await page
+      .getByLabel("현재 쪽")
+      .first()
+      .evaluate((input: HTMLInputElement) => {
+        input.removeAttribute("max");
+      });
+    await page.getByLabel("현재 쪽").first().fill("301");
+    await page.getByRole("button", { name: "기록", exact: true }).click();
+
+    await expect(page.getByText("전체 300쪽을 넘을 수 없습니다.")).toBeVisible();
+    await expect(page.getByText("0 / 300쪽")).toBeVisible();
+  });
+
+  test("되돌아가는 입력은 경고를 띄우되 막지는 않는다", async ({ page }) => {
+    await registerBook(page, "되돌리기 검증용");
+
+    await page.getByLabel("진행률 (%)").first().fill("50");
+    await page.getByRole("button", { name: "기록", exact: true }).click();
+    await expect(page.getByText("50%", { exact: true })).toBeVisible();
+
+    await page.getByLabel("진행률 (%)").first().fill("40");
+    await expect(page.getByText(/보다 뒤로 갑니다/)).toBeVisible();
+
+    await page.getByRole("button", { name: "기록", exact: true }).click();
+    await expect(page.getByText("40%", { exact: true })).toBeVisible();
+
+    await page.getByText("진행 기록 2건").click();
+    await expect(page.getByText("50% → 40%")).toBeVisible();
+  });
+
+  test("홈의 빠른 기록으로 페이지 이동 없이 진행을 남긴다", async ({ page }) => {
+    await registerBook(page, "빠른 기록 검증용");
+    await page.getByRole("button", { name: "읽기 시작" }).click();
+    await expect(page.getByText("1회독 · 읽는 중")).toBeVisible();
+
+    await page.goto("/");
+    const card = page.locator("li", { hasText: "빠른 기록 검증용" }).first();
+    await expect(card).toBeVisible();
+
+    await card.getByLabel("진행률 (%)").fill("70");
+    await card.getByRole("button", { name: "기록" }).click();
+
+    await expect(card.getByText("70%").first()).toBeVisible();
+    await expect(page).toHaveURL("/");
+  });
+});

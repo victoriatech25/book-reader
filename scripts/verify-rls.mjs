@@ -238,6 +238,42 @@ async function main() {
     JSON.stringify(logs.body?.[0]),
   );
 
+  // 연속 기록: 다음 기록의 시작점이 직전 도달점과 이어져야 타임라인이 성립한다.
+  const rpcAgain = await rest("/rpc/record_progress", {
+    method: "POST",
+    token: a.token,
+    body: { p_reading_id: readingId, p_value_to: 55 },
+  });
+  check("두 번째 진행 기록", rpcAgain.ok, `status=${rpcAgain.status}`);
+  check(
+    "current_value 갱신 (55)",
+    rpcAgain.body?.current_value === 55,
+    String(rpcAgain.body?.current_value),
+  );
+
+  const chained = await rest(
+    `/progress_logs?select=value_from,value_to&reading_id=eq.${readingId}&order=created_at`,
+    { token: a.token },
+  );
+  check("progress_logs 2행", chained.body?.length === 2, `rows=${chained.body?.length}`);
+  check(
+    "두 번째 기록의 value_from이 직전 도달점(30)과 이어진다",
+    chained.body?.[1]?.value_from === 30 && chained.body?.[1]?.value_to === 55,
+    JSON.stringify(chained.body?.[1]),
+  );
+
+  // 되돌리는 기록도 허용한다 — 잘못 적은 값을 고치는 정당한 경우가 있다.
+  const backward = await rest("/rpc/record_progress", {
+    method: "POST",
+    token: a.token,
+    body: { p_reading_id: readingId, p_value_to: 40 },
+  });
+  check(
+    "되돌아가는 기록 → 허용",
+    backward.ok && backward.body?.current_value === 40,
+    `status=${backward.status}`,
+  );
+
   // -- 3. RLS 격리 ----------------------------------------------------------
   section("3. RLS 격리 (B가 A의 데이터에 접근)");
 

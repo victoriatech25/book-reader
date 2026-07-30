@@ -4,11 +4,13 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { readBookForm } from "@/lib/books/schema";
+import { checkMinutes, checkProgress } from "@/lib/progress";
 import {
   buildStatusPatch,
   initialProgress,
   InvalidTransitionError,
   READING_STATUSES,
+  type ProgressUnit,
   type ReadingStatus,
 } from "@/lib/reading-status";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
@@ -173,6 +175,76 @@ export async function changeStatusAction(
 
   const { error } = await supabase.from("readings").update(patch).eq("id", readingId);
   if (error) return { error: toMessage(error) };
+
+  revalidatePath("/");
+  revalidatePath(`/books/${reading.book_id}`);
+  return ACTION_IDLE;
+}
+
+// ---------------------------------------------------------------------------
+// 진행 기록
+// ---------------------------------------------------------------------------
+
+/**
+ * record_progress()가 raise하는 문장은 한국어로 작성돼 있어 그대로 보여줘도 된다.
+ * 그 외 DB 오류는 내부 사정이므로 감춘다.
+ */
+function toRpcMessage(error: { code?: string; message: string }): string {
+  if (error.code === "23514" || error.code === "02000" || error.code === "P0001") {
+    return error.message;
+  }
+  console.error(`[progress] ${error.code ?? "?"}: ${error.message}`);
+  return "기록하지 못했습니다. 잠시 후 다시 시도해주세요.";
+}
+
+/**
+ * 진행 기록. progress_logs insert와 readings.current_value 갱신을 DB 함수
+ * 하나로 묶어 원자적으로 처리한다 (PRD §2.3).
+ */
+export async function recordProgressAction(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const { supabase } = await requireUser();
+
+  const readingId = formData.get("reading_id");
+  if (typeof readingId !== "string") return { error: "잘못된 요청입니다." };
+
+  const { data: reading, error: loadError } = await supabase
+    .from("readings")
+    .select("id, book_id, status, progress_unit, current_value, target_value")
+    .eq("id", readingId)
+    .single();
+
+  if (loadError || !reading) return { error: "독서 기록을 찾을 수 없습니다." };
+
+  const rawValue = String(formData.get("value") ?? "").trim();
+  if (rawValue === "") return { error: "진행 값을 입력하세요." };
+
+  const check = checkProgress({
+    value: Number(rawValue),
+    current: reading.current_value,
+    target: reading.target_value,
+    unit: reading.progress_unit as ProgressUnit,
+  });
+  if (!check.ok) return { error: check.message };
+
+  const rawMinutes = String(formData.get("minutes") ?? "").trim();
+  const minutes = rawMinutes === "" ? null : Number(rawMinutes);
+  const minutesCheck = checkMinutes(minutes);
+  if (!minutesCheck.ok) return { error: minutesCheck.message };
+
+  const rawMemo = String(formData.get("memo") ?? "").trim();
+
+  const { error } = await supabase.rpc("record_progress", {
+    p_reading_id: readingId,
+    p_value_to: Number(rawValue),
+    // 생성된 타입은 기본값이 있는 인자를 optional로 본다. 생략하면 DB 기본값(null)이 쓰인다.
+    p_minutes: minutes ?? undefined,
+    p_memo: rawMemo === "" ? undefined : rawMemo,
+  });
+
+  if (error) return { error: toRpcMessage(error) };
 
   revalidatePath("/");
   revalidatePath(`/books/${reading.book_id}`);

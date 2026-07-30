@@ -16,9 +16,3 @@ export function formatDate(value: string | null | undefined): string {
   if (Number.isNaN(date.getTime())) return "-";
   return DATE_FORMAT.format(date);
 }
-
-/** 진행률(%). target이 없거나 0이면 0으로 본다. */
-export function progressPercent(current: number, target: number | null): number {
-  if (!target || target <= 0) return 0;
-  return Math.min(100, Math.round((current / target) * 100));
-}
