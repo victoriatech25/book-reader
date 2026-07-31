@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { UserBadge } from "@/components/user-badge";
+import { buttonPrimary, card } from "@/components/ui/styles";
 import { progressPercent } from "@/lib/progress";
 import { STATUS_LABEL, type ProgressUnit, type ReadingStatus } from "@/lib/reading-status";
 import { createServerSupabaseClient, getCurrentUser } from "@/lib/supabase/server";
@@ -39,42 +40,32 @@ export default async function Home() {
   });
 
   return (
-    <div className="flex flex-1 justify-center bg-zinc-50 px-6 py-12 dark:bg-zinc-950">
+    <div className="bg-background flex flex-1 justify-center px-6 py-12">
       <main className="w-full max-w-xl">
         <div className="flex items-baseline justify-between gap-4">
-          <h1 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
-            book-reader
-          </h1>
+          <h1 className="text-foreground text-2xl font-semibold tracking-tight">book-reader</h1>
           <UserBadge email={user.email ?? "(이메일 없음)"} />
         </div>
 
         <div className="mt-6">
-          <Link
-            href="/books/new"
-            className="inline-block rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-zinc-50 dark:bg-zinc-50 dark:text-zinc-900"
-          >
+          <Link href="/books/new" className={`inline-block ${buttonPrimary}`}>
             책 등록
           </Link>
         </div>
 
         {(reading ?? []).length > 0 && (
           <section className="mt-10">
-            <h2 className="text-sm font-medium text-zinc-900 dark:text-zinc-100">
-              읽는 중 ({reading?.length})
-            </h2>
+            <h2 className="text-foreground text-sm font-medium">읽는 중 ({reading?.length})</h2>
             <ul className="mt-3 space-y-3">
               {(reading ?? []).map((item) => (
-                <li
-                  key={item.id}
-                  className="rounded-lg border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900"
-                >
+                <li key={item.id} className={card}>
                   <Link
                     href={`/books/${item.books.id}`}
-                    className="text-sm font-medium text-zinc-900 hover:underline dark:text-zinc-50"
+                    className="text-foreground font-serif text-base font-medium hover:underline"
                   >
                     {item.books.title}
                   </Link>
-                  <span className="ml-2 text-xs text-zinc-500 dark:text-zinc-400">
+                  <span className="text-muted-foreground ml-2 text-xs">
                     {item.books.authors.join(", ")}
                     {item.attempt_no > 1 ? ` · ${item.attempt_no}회독` : ""}
                   </span>
@@ -91,16 +82,14 @@ export default async function Home() {
           </section>
         )}
 
-        <h2 className="mt-10 text-sm font-medium text-zinc-900 dark:text-zinc-100">
-          최근 기록 ({books.length})
-        </h2>
+        <h2 className="text-foreground mt-10 text-sm font-medium">최근 기록 ({books.length})</h2>
 
         {books.length === 0 ? (
-          <p className="mt-3 text-sm text-zinc-500 dark:text-zinc-400">
+          <p className="text-muted-foreground mt-3 text-sm">
             아직 등록한 책이 없습니다. 위에서 첫 책을 담아보세요.
           </p>
         ) : (
-          <ul className="mt-3 divide-y divide-zinc-200 border-y border-zinc-200 dark:divide-zinc-800 dark:border-zinc-800">
+          <ul className="divide-border border-border mt-3 divide-y border-y">
             {books.map((book) => {
               const percent = book.latest
                 ? progressPercent(book.latest.current_value, book.latest.target_value)
@@ -110,7 +99,7 @@ export default async function Home() {
                 <li key={book.id}>
                   <Link
                     href={`/books/${book.id}`}
-                    className="flex items-center gap-3 py-3 hover:bg-zinc-100 dark:hover:bg-zinc-900"
+                    className="hover:bg-accent flex items-center gap-3 rounded-md px-2 py-3 transition-colors"
                   >
                     {book.cover_url ? (
                       // 표지는 외부 도메인이라 next/image 대신 img를 쓴다.
@@ -121,21 +110,21 @@ export default async function Home() {
                         className="h-14 w-10 shrink-0 rounded-sm object-cover"
                       />
                     ) : (
-                      <span className="h-14 w-10 shrink-0 rounded-sm bg-zinc-100 dark:bg-zinc-800" />
+                      <span className="bg-muted h-14 w-10 shrink-0 rounded-sm" />
                     )}
                     <span className="min-w-0 flex-1">
-                      <span className="block truncate text-sm font-medium text-zinc-900 dark:text-zinc-50">
+                      <span className="text-foreground block truncate font-serif text-base font-medium">
                         {book.title}
                       </span>
-                      <span className="mt-0.5 block truncate text-xs text-zinc-500 dark:text-zinc-400">
+                      <span className="text-muted-foreground mt-0.5 block truncate text-xs">
                         {book.authors.join(", ")}
                       </span>
                     </span>
                     <span className="shrink-0 text-right">
-                      <span className="block text-xs text-zinc-600 dark:text-zinc-400">
+                      <span className="text-muted-foreground block text-xs">
                         {book.latest ? STATUS_LABEL[book.latest.status as ReadingStatus] : "-"}
                       </span>
-                      <span className="mt-0.5 block font-mono text-xs text-zinc-500 dark:text-zinc-400">
+                      <span className="text-muted-foreground mt-0.5 block font-mono text-xs">
                         {percent}%
                       </span>
                     </span>
@@ -146,7 +135,7 @@ export default async function Home() {
           </ul>
         )}
 
-        <p className="mt-6 text-xs text-zinc-500 dark:text-zinc-400">
+        <p className="text-muted-foreground mt-6 text-xs">
           필터·정렬이 있는 서재 화면은 W9에서 만듭니다. 지금은 최근 순 20권만 보여줍니다.
         </p>
       </main>

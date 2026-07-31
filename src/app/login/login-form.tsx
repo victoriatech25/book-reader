@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 
+import { buttonPrimary, card, errorText, input, label, quietLink } from "@/components/ui/styles";
 import { loginSchema } from "@/lib/auth/validation";
 import { createBrowserSupabaseClient } from "@/lib/supabase/client";
 
@@ -47,11 +48,8 @@ export function LoginForm({ next }: { next: string }) {
 
   if (status.kind === "sent") {
     return (
-      <div
-        role="status"
-        className="rounded-lg border border-zinc-200 bg-white p-4 text-sm text-zinc-700 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300"
-      >
-        <p className="font-medium text-zinc-900 dark:text-zinc-50">메일을 확인해주세요</p>
+      <div role="status" className={`${card} text-muted-foreground text-sm`}>
+        <p className="text-foreground font-medium">메일을 확인해주세요</p>
         <p className="mt-1.5">
           <span className="font-mono">{email}</span> 으로 로그인 링크를 보냈습니다. 링크는 한 번만
           쓸 수 있습니다.
@@ -59,7 +57,7 @@ export function LoginForm({ next }: { next: string }) {
         <button
           type="button"
           onClick={() => setStatus({ kind: "idle" })}
-          className="mt-3 text-sm text-zinc-500 underline underline-offset-4 hover:text-zinc-900 dark:hover:text-zinc-100"
+          className={`mt-3 ${quietLink}`}
         >
           다른 주소로 다시 보내기
         </button>
@@ -70,10 +68,7 @@ export function LoginForm({ next }: { next: string }) {
   return (
     <form onSubmit={handleSubmit} className="space-y-3" noValidate>
       <div>
-        <label
-          htmlFor="email"
-          className="block text-sm font-medium text-zinc-900 dark:text-zinc-100"
-        >
+        <label htmlFor="email" className={label}>
           이메일
         </label>
         <input
@@ -86,12 +81,12 @@ export function LoginForm({ next }: { next: string }) {
           onChange={(event) => setEmail(event.target.value)}
           aria-invalid={status.kind === "error"}
           aria-describedby={status.kind === "error" ? "email-error" : undefined}
-          className="mt-1.5 w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 outline-none focus:border-zinc-900 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50 dark:focus:border-zinc-100"
+          className={`mt-1.5 w-full ${input}`}
         />
       </div>
 
       {status.kind === "error" && (
-        <p id="email-error" role="alert" className="text-sm text-red-600 dark:text-red-400">
+        <p id="email-error" role="alert" className={errorText}>
           {status.message}
         </p>
       )}
@@ -99,7 +94,7 @@ export function LoginForm({ next }: { next: string }) {
       <button
         type="submit"
         disabled={status.kind === "sending"}
-        className="w-full rounded-md bg-zinc-900 px-3 py-2 text-sm font-medium text-zinc-50 disabled:opacity-60 dark:bg-zinc-50 dark:text-zinc-900"
+        className={`w-full ${buttonPrimary}`}
       >
         {status.kind === "sending" ? "보내는 중..." : "로그인 링크 받기"}
       </button>

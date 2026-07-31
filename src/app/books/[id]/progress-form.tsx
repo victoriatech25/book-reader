@@ -4,11 +4,11 @@ import { useActionState, useState } from "react";
 
 import { ACTION_IDLE } from "@/app/books/action-state";
 import { recordProgressAction } from "@/app/books/actions";
+import { buttonPrimary, errorText, input } from "@/components/ui/styles";
 import { checkProgress, formatProgress } from "@/lib/progress";
 import type { ProgressUnit } from "@/lib/reading-status";
 
-const inputClass =
-  "rounded-md border border-zinc-300 bg-white px-3 py-1.5 text-sm text-zinc-900 outline-none focus:border-zinc-900 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50 dark:focus:border-zinc-100";
+const inputClass = input;
 
 export function ProgressForm({
   readingId,
@@ -30,18 +30,12 @@ export function ProgressForm({
   const backward = local?.ok === true && local.backward;
 
   return (
-    <form
-      action={formAction}
-      className="mt-4 space-y-2 border-t border-zinc-200 pt-4 dark:border-zinc-800"
-    >
+    <form action={formAction} className="border-border mt-4 space-y-2 border-t pt-4">
       <input type="hidden" name="reading_id" value={readingId} />
 
       <div className="flex flex-wrap items-end gap-2">
         <div>
-          <label
-            htmlFor={`value-${readingId}`}
-            className="block text-xs text-zinc-500 dark:text-zinc-400"
-          >
+          <label htmlFor={`value-${readingId}`} className="text-muted-foreground block text-xs">
             {unit === "page" ? "현재 쪽" : "진행률 (%)"}
           </label>
           <input
@@ -58,10 +52,7 @@ export function ProgressForm({
         </div>
 
         <div>
-          <label
-            htmlFor={`minutes-${readingId}`}
-            className="block text-xs text-zinc-500 dark:text-zinc-400"
-          >
+          <label htmlFor={`minutes-${readingId}`} className="text-muted-foreground block text-xs">
             읽은 시간 (분)
           </label>
           <input
@@ -74,11 +65,7 @@ export function ProgressForm({
           />
         </div>
 
-        <button
-          type="submit"
-          disabled={pending}
-          className="rounded-md bg-zinc-900 px-4 py-1.5 text-sm font-medium text-zinc-50 disabled:opacity-60 dark:bg-zinc-50 dark:text-zinc-900"
-        >
+        <button type="submit" disabled={pending} className={buttonPrimary}>
           {pending ? "기록 중..." : "기록"}
         </button>
       </div>
@@ -86,18 +73,16 @@ export function ProgressForm({
       <input name="memo" placeholder="한 줄 메모 (선택)" className={`w-full ${inputClass}`} />
 
       {backward && (
-        <p className="text-xs text-amber-700 dark:text-amber-500">
+        <p className="text-chart-1 text-xs">
           현재 {formatProgress(current, unit, target)}보다 뒤로 갑니다. 고치는 것이 맞다면 그대로
           기록하세요.
         </p>
       )}
 
-      {local?.ok === false && (
-        <p className="text-xs text-red-600 dark:text-red-400">{local.message}</p>
-      )}
+      {local?.ok === false && <p className="text-destructive text-xs">{local.message}</p>}
 
       {state.error && (
-        <p role="alert" className="text-sm text-red-600 dark:text-red-400">
+        <p role="alert" className={errorText}>
           {state.error}
         </p>
       )}

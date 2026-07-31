@@ -14,11 +14,14 @@ import {
 } from "@/lib/reading-status";
 import { formatNoteLocation, formatRating, NOTE_KIND_LABEL, type NoteKind } from "@/lib/reviews";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { ConfirmSubmit } from "@/components/confirm-submit";
+import { card, dangerLink, quietLink } from "@/components/ui/styles";
 
 import { FinishDialog, ReviewEditor } from "./finish-dialog";
 import { NoteForm } from "./note-form";
 import { ProgressForm } from "./progress-form";
 import { NewAttemptButton, ReadingActions } from "./reading-actions";
+import { UnitSwitch } from "./unit-switch";
 
 export default async function BookDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -89,12 +92,9 @@ export default async function BookDetailPage({ params }: { params: Promise<{ id:
   ].filter(Boolean);
 
   return (
-    <div className="flex flex-1 justify-center bg-zinc-50 px-6 py-12 dark:bg-zinc-950">
+    <div className="bg-background flex flex-1 justify-center px-6 py-12">
       <main className="w-full max-w-xl">
-        <Link
-          href="/"
-          className="text-sm text-zinc-500 underline underline-offset-4 hover:text-zinc-900 dark:hover:text-zinc-100"
-        >
+        <Link href="/" className={quietLink}>
           ← 홈
         </Link>
 
@@ -105,18 +105,14 @@ export default async function BookDetailPage({ params }: { params: Promise<{ id:
             <img
               src={book.cover_url}
               alt=""
-              className="h-36 w-24 shrink-0 rounded-sm bg-zinc-100 object-cover dark:bg-zinc-800"
+              className="bg-muted h-36 w-24 shrink-0 rounded-sm object-cover"
             />
           )}
           <div className="min-w-0">
-            <h1 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
-              {book.title}
-            </h1>
-            {book.subtitle && (
-              <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">{book.subtitle}</p>
-            )}
-            <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">{meta.join(" · ")}</p>
-            <p className="mt-2 font-mono text-xs text-zinc-500 dark:text-zinc-400">
+            <h1 className="text-foreground text-2xl font-semibold tracking-tight">{book.title}</h1>
+            {book.subtitle && <p className="text-muted-foreground mt-1 text-sm">{book.subtitle}</p>}
+            <p className="text-muted-foreground mt-2 text-sm">{meta.join(" · ")}</p>
+            <p className="text-muted-foreground mt-2 font-mono text-xs">
               {FORMAT_LABEL[book.format as keyof typeof FORMAT_LABEL]} ·{" "}
               {OWNERSHIP_LABEL[book.ownership as keyof typeof OWNERSHIP_LABEL]}
               {book.total_pages ? ` · ${book.total_pages}쪽` : ""}
@@ -126,30 +122,28 @@ export default async function BookDetailPage({ params }: { params: Promise<{ id:
         </div>
 
         {book.memo && (
-          <p className="mt-6 rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm whitespace-pre-wrap text-zinc-700 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300">
+          <p className="border-border bg-card text-muted-foreground mt-6 rounded-md border px-3 py-2 text-sm whitespace-pre-wrap">
             {book.memo}
           </p>
         )}
 
         <div className="mt-6 flex items-center gap-4">
-          <Link
-            href={`/books/${book.id}/edit`}
-            className="text-sm text-zinc-500 underline underline-offset-4 hover:text-zinc-900 dark:hover:text-zinc-100"
-          >
+          <Link href={`/books/${book.id}/edit`} className={quietLink}>
             수정
           </Link>
           <form action={deleteBookAction}>
             <input type="hidden" name="book_id" value={book.id} />
-            <button
-              type="submit"
-              className="text-sm text-red-600 underline underline-offset-4 hover:text-red-700 dark:text-red-400"
-            >
-              삭제
-            </button>
+            <ConfirmSubmit
+              label="삭제"
+              triggerClassName={dangerLink}
+              title="이 책을 삭제할까요?"
+              description="진행 기록·인용구·소감을 포함해 이 책의 모든 회차가 함께 지워집니다. 되돌릴 수 없습니다."
+              confirmLabel="삭제"
+            />
           </form>
         </div>
 
-        <h2 className="mt-10 text-sm font-medium text-zinc-900 dark:text-zinc-100">독서 기록</h2>
+        <h2 className="text-foreground mt-10 text-sm font-medium">독서 기록</h2>
 
         <ul className="mt-3 space-y-4">
           {attempts.map((reading) => {
@@ -160,27 +154,22 @@ export default async function BookDetailPage({ params }: { params: Promise<{ id:
             const readingNotes = notesByReading.get(reading.id) ?? [];
 
             return (
-              <li
-                key={reading.id}
-                className="rounded-lg border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900"
-              >
+              <li key={reading.id} className={card}>
                 <div className="flex items-baseline justify-between gap-3">
-                  <span className="text-sm font-medium text-zinc-900 dark:text-zinc-50">
+                  <span className="text-foreground text-sm font-medium">
                     {reading.attempt_no}회독 · {STATUS_LABEL[reading.status as ReadingStatus]}
                   </span>
-                  <span className="font-mono text-xs text-zinc-500 dark:text-zinc-400">
-                    {unitLabel}
-                  </span>
+                  <span className="text-muted-foreground font-mono text-xs">{unitLabel}</span>
                 </div>
 
-                <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-zinc-100 dark:bg-zinc-800">
+                <div className="bg-muted mt-2 h-1.5 w-full overflow-hidden rounded-full">
                   <div
-                    className="h-full rounded-full bg-zinc-900 dark:bg-zinc-100"
+                    className="bg-primary h-full rounded-full transition-[width]"
                     style={{ width: `${percent}%` }}
                   />
                 </div>
 
-                <dl className="mt-3 grid grid-cols-3 gap-2 text-xs text-zinc-500 dark:text-zinc-400">
+                <dl className="text-muted-foreground mt-3 grid grid-cols-3 gap-2 text-xs">
                   <div>
                     <dt className="inline">시작 </dt>
                     <dd className="inline font-mono">{formatDate(reading.started_at)}</dd>
@@ -196,18 +185,18 @@ export default async function BookDetailPage({ params }: { params: Promise<{ id:
                 </dl>
 
                 {reading.drop_reason && (
-                  <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
+                  <p className="text-muted-foreground mt-2 text-sm">
                     중단 사유: {reading.drop_reason}
                   </p>
                 )}
 
                 {(reading.rating !== null || reading.review) && (
-                  <div className="mt-3 rounded-md bg-zinc-50 px-3 py-2 dark:bg-zinc-950">
-                    <p className="font-mono text-sm text-zinc-900 dark:text-zinc-50">
+                  <div className="border-border bg-muted/50 mt-3 rounded-md border-l-2 px-3 py-2">
+                    <p className="text-foreground font-mono text-sm">
                       {formatRating(reading.rating)}
                     </p>
                     {reading.review && (
-                      <p className="mt-1 text-sm whitespace-pre-wrap text-zinc-700 dark:text-zinc-300">
+                      <p className="prose-quote mt-1 text-sm whitespace-pre-wrap">
                         {reading.review}
                       </p>
                     )}
@@ -233,44 +222,43 @@ export default async function BookDetailPage({ params }: { params: Promise<{ id:
                 )}
 
                 {!isTerminal(reading.status as ReadingStatus) && (
-                  <ProgressForm
-                    readingId={reading.id}
-                    unit={unit}
-                    current={reading.current_value}
-                    target={reading.target_value}
-                  />
+                  <>
+                    <ProgressForm
+                      readingId={reading.id}
+                      unit={unit}
+                      current={reading.current_value}
+                      target={reading.target_value}
+                    />
+                    <UnitSwitch readingId={reading.id} unit={unit} />
+                  </>
                 )}
 
                 {timeline.length > 0 && (
-                  <details className="mt-4 border-t border-zinc-200 pt-3 dark:border-zinc-800">
-                    <summary className="cursor-pointer text-xs text-zinc-500 dark:text-zinc-400">
+                  <details className="border-border mt-4 border-t pt-3">
+                    <summary className="text-muted-foreground cursor-pointer text-xs">
                       진행 기록 {timeline.length}건
                     </summary>
                     <ol className="mt-2 space-y-1.5">
                       {timeline.map((log) => (
                         <li key={log.id} className="flex flex-wrap items-baseline gap-x-2 text-xs">
-                          <span className="font-mono text-zinc-500 dark:text-zinc-400">
+                          <span className="text-muted-foreground font-mono">
                             {formatDate(log.logged_on)}
                           </span>
-                          <span className="font-mono text-zinc-800 dark:text-zinc-200">
+                          <span className="text-foreground font-mono">
                             {formatDelta(log.value_from, log.value_to, unit)}
                           </span>
                           {log.minutes !== null && (
-                            <span className="text-zinc-500 dark:text-zinc-400">
-                              {log.minutes}분
-                            </span>
+                            <span className="text-muted-foreground">{log.minutes}분</span>
                           )}
-                          {log.memo && (
-                            <span className="text-zinc-600 dark:text-zinc-400">{log.memo}</span>
-                          )}
+                          {log.memo && <span className="text-muted-foreground">{log.memo}</span>}
                         </li>
                       ))}
                     </ol>
                   </details>
                 )}
 
-                <div className="mt-4 border-t border-zinc-200 pt-3 dark:border-zinc-800">
-                  <h3 className="text-xs font-medium text-zinc-900 dark:text-zinc-100">
+                <div className="border-border mt-4 border-t pt-3">
+                  <h3 className="text-foreground text-xs font-medium">
                     인용구 · 메모 {readingNotes.length > 0 && `(${readingNotes.length})`}
                   </h3>
 
@@ -279,10 +267,10 @@ export default async function BookDetailPage({ params }: { params: Promise<{ id:
                       {readingNotes.map((note) => (
                         <li
                           key={note.id}
-                          className="rounded-md border border-zinc-200 px-3 py-2 dark:border-zinc-800"
+                          className="border-border bg-muted/40 rounded-md border-l-2 px-3 py-2"
                         >
                           <div className="flex items-baseline justify-between gap-2">
-                            <span className="font-mono text-xs text-zinc-500 dark:text-zinc-400">
+                            <span className="text-muted-foreground font-mono text-xs">
                               {NOTE_KIND_LABEL[note.kind as NoteKind]}
                               {note.location !== null &&
                                 ` · ${formatNoteLocation(note.location, unit)}`}
@@ -296,7 +284,7 @@ export default async function BookDetailPage({ params }: { params: Promise<{ id:
                                   aria-label={
                                     note.is_favorite ? "즐겨찾기 해제" : "즐겨찾기에 추가"
                                   }
-                                  className="text-sm text-zinc-400 hover:text-amber-500"
+                                  className="text-muted-foreground hover:text-chart-4 text-sm transition-colors"
                                 >
                                   {note.is_favorite ? "★" : "☆"}
                                 </button>
@@ -304,17 +292,18 @@ export default async function BookDetailPage({ params }: { params: Promise<{ id:
                               <form action={deleteNoteAction}>
                                 <input type="hidden" name="note_id" value={note.id} />
                                 <input type="hidden" name="book_id" value={book.id} />
-                                <button
-                                  type="submit"
-                                  aria-label="인용구 삭제"
-                                  className="text-xs text-zinc-400 hover:text-red-600"
-                                >
-                                  삭제
-                                </button>
+                                <ConfirmSubmit
+                                  label="삭제"
+                                  triggerAriaLabel="인용구 삭제"
+                                  triggerClassName="text-xs text-muted-foreground transition-colors hover:text-destructive"
+                                  title="이 기록을 삭제할까요?"
+                                  description="되돌릴 수 없습니다."
+                                  confirmLabel="삭제"
+                                />
                               </form>
                             </span>
                           </div>
-                          <p className="mt-1 text-sm whitespace-pre-wrap text-zinc-800 dark:text-zinc-200">
+                          <p className="prose-quote mt-1 text-sm whitespace-pre-wrap">
                             {note.body}
                           </p>
                         </li>

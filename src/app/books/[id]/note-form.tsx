@@ -4,11 +4,11 @@ import { useActionState, useState } from "react";
 
 import { ACTION_IDLE, type ActionState } from "@/app/books/action-state";
 import { createNoteAction } from "@/app/books/actions";
+import { buttonSecondary, errorText, input } from "@/components/ui/styles";
 import type { ProgressUnit } from "@/lib/reading-status";
 import { NOTE_KIND_LABEL, NOTE_KINDS, NOTE_MAX_LENGTH } from "@/lib/reviews";
 
-const inputClass =
-  "rounded-md border border-zinc-300 bg-white px-3 py-1.5 text-sm text-zinc-900 outline-none focus:border-zinc-900 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50 dark:focus:border-zinc-100";
+const inputClass = input;
 
 type FieldsProps = {
   readingId: string;
@@ -34,7 +34,7 @@ function NoteFields({ readingId, unit, target, state, formAction, pending }: Fie
         onChange={(event) => setBody(event.target.value)}
         aria-label="인용구 내용"
         placeholder="기억하고 싶은 문장이나 생각"
-        className={`w-full ${inputClass}`}
+        className={`w-full ${inputClass} font-serif`}
       />
 
       <div className="flex flex-wrap items-center gap-2">
@@ -59,18 +59,18 @@ function NoteFields({ readingId, unit, target, state, formAction, pending }: Fie
         <button
           type="submit"
           disabled={pending || body.trim().length === 0}
-          className="rounded-md border border-zinc-300 px-3 py-1.5 text-sm text-zinc-800 hover:bg-zinc-100 disabled:opacity-60 dark:border-zinc-700 dark:text-zinc-100 dark:hover:bg-zinc-800"
+          className={buttonSecondary}
         >
           {pending ? "저장 중..." : "남기기"}
         </button>
 
-        <span className="ml-auto font-mono text-xs text-zinc-500 dark:text-zinc-400">
+        <span className="text-muted-foreground ml-auto font-mono text-xs">
           {body.length} / {NOTE_MAX_LENGTH}
         </span>
       </div>
 
       {state.error && (
-        <p role="alert" className="text-sm text-red-600 dark:text-red-400">
+        <p role="alert" className={errorText}>
           {state.error}
         </p>
       )}

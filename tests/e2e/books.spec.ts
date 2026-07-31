@@ -125,7 +125,15 @@ test.describe.serial("도서 등록과 상태 전이", () => {
     await expect(page.getByRole("link", { name: /삭제 검증용 책/ })).toBeVisible();
 
     await page.getByRole("link", { name: /삭제 검증용 책/ }).click();
-    await page.getByRole("button", { name: "삭제" }).click();
+
+    // W7.5부터 삭제는 확인을 한 번 거친다. cascade로 회차·기록·인용구까지
+    // 함께 지워지므로 클릭 한 번에 사라지면 안 된다.
+    const confirm = page.getByRole("dialog", { name: "이 책을 삭제할까요?" });
+    await expect(confirm).toBeHidden();
+
+    await page.getByRole("button", { name: "삭제", exact: true }).first().click();
+    await expect(confirm).toBeVisible();
+    await confirm.getByRole("button", { name: "삭제" }).click();
 
     await expect(page).toHaveURL("/");
     await expect(page.getByRole("link", { name: /삭제 검증용 책/ })).toHaveCount(0);

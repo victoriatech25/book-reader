@@ -105,6 +105,11 @@ test.describe.serial("완독 · 소감 · 인용구", () => {
     await expect(page.getByRole("button", { name: "즐겨찾기 해제" })).toBeVisible();
 
     await page.getByRole("button", { name: "인용구 삭제" }).click();
+
+    const confirm = page.getByRole("dialog", { name: "이 기록을 삭제할까요?" });
+    await expect(confirm).toBeVisible();
+    await confirm.getByRole("button", { name: "삭제" }).click();
+
     await expect(page.getByText("역사는 사람이 만든 이야기다.")).toHaveCount(0);
   });
 

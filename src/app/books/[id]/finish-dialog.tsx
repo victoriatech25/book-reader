@@ -4,15 +4,14 @@ import { useActionState, useRef } from "react";
 
 import { ACTION_IDLE } from "@/app/books/action-state";
 import { finishReadingAction, updateReviewAction } from "@/app/books/actions";
+import { buttonPrimary, buttonSecondary, errorText } from "@/components/ui/styles";
 
 import { ReviewFields } from "./review-fields";
 
-const secondaryButton =
-  "rounded-md border border-zinc-300 px-3 py-1.5 text-sm text-zinc-800 hover:bg-zinc-100 disabled:opacity-60 dark:border-zinc-700 dark:text-zinc-100 dark:hover:bg-zinc-800";
-const primaryButton =
-  "rounded-md bg-zinc-900 px-4 py-1.5 text-sm font-medium text-zinc-50 disabled:opacity-60 dark:bg-zinc-50 dark:text-zinc-900";
+const secondaryButton = buttonSecondary;
+const primaryButton = buttonPrimary;
 const dialogClass =
-  "w-[min(28rem,calc(100vw-2rem))] rounded-lg border border-zinc-200 bg-white p-5 text-zinc-900 backdrop:bg-black/40 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-50";
+  "m-auto w-[min(28rem,calc(100vw-2rem))] rounded-lg border border-border bg-card p-5 text-card-foreground backdrop:bg-black/40";
 
 /**
  * 완독 처리와 소감 작성을 한 화면에서 끝낸다 (PRD §3.1 F5).
@@ -40,7 +39,7 @@ export function FinishDialog({ readingId }: { readingId: string }) {
           <ReviewFields idPrefix={`finish-${readingId}`} />
 
           {state.error && (
-            <p role="alert" className="text-sm text-red-600 dark:text-red-400">
+            <p role="alert" className={errorText}>
               {state.error}
             </p>
           )}
@@ -81,7 +80,7 @@ export function ReviewEditor({
 
   return (
     <details className="mt-3">
-      <summary className="cursor-pointer text-xs text-zinc-500 dark:text-zinc-400">
+      <summary className="text-muted-foreground cursor-pointer text-xs">
         별점·소감 {review || rating !== null ? "고치기" : "남기기"}
       </summary>
 
@@ -97,7 +96,7 @@ export function ReviewEditor({
         />
 
         {state.error && (
-          <p role="alert" className="text-sm text-red-600 dark:text-red-400">
+          <p role="alert" className={errorText}>
             {state.error}
           </p>
         )}
