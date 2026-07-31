@@ -4,6 +4,7 @@ import { useActionState, useOptimistic } from "react";
 
 import { ACTION_IDLE } from "@/app/books/action-state";
 import { recordProgressAction } from "@/app/books/actions";
+import { buttonSecondary, errorText, input } from "@/components/ui/styles";
 import { formatProgress, progressPercent } from "@/lib/progress";
 import type { ProgressUnit } from "@/lib/reading-status";
 
@@ -41,15 +42,15 @@ export function QuickProgress({
   return (
     <div className="mt-2">
       <div className="flex items-baseline justify-between gap-3">
-        <span className="font-mono text-xs text-zinc-500 dark:text-zinc-400">
+        <span className="text-muted-foreground font-mono text-xs">
           {formatProgress(optimisticValue, unit, target)}
         </span>
-        <span className="font-mono text-xs text-zinc-500 dark:text-zinc-400">{percent}%</span>
+        <span className="text-muted-foreground font-mono text-xs">{percent}%</span>
       </div>
 
-      <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-zinc-100 dark:bg-zinc-800">
+      <div className="bg-muted mt-1.5 h-1.5 w-full overflow-hidden rounded-full">
         <div
-          className="h-full rounded-full bg-zinc-900 transition-[width] dark:bg-zinc-100"
+          className="bg-primary h-full rounded-full transition-[width]"
           style={{ width: `${percent}%` }}
         />
       </div>
@@ -63,7 +64,7 @@ export function QuickProgress({
           max={target ?? undefined}
           aria-label={unit === "page" ? "현재 쪽" : "진행률 (%)"}
           placeholder={unit === "page" ? "현재 쪽" : "%"}
-          className="w-24 rounded-md border border-zinc-300 bg-white px-2 py-1 text-sm text-zinc-900 outline-none focus:border-zinc-900 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50"
+          className={`w-24 ${input}`}
         />
         <input
           name="minutes"
@@ -72,19 +73,15 @@ export function QuickProgress({
           max={1440}
           aria-label="읽은 시간 (분)"
           placeholder="분"
-          className="w-20 rounded-md border border-zinc-300 bg-white px-2 py-1 text-sm text-zinc-900 outline-none focus:border-zinc-900 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50"
+          className={`w-20 ${input}`}
         />
-        <button
-          type="submit"
-          disabled={pending}
-          className="rounded-md border border-zinc-300 px-3 py-1 text-sm text-zinc-800 hover:bg-zinc-100 disabled:opacity-60 dark:border-zinc-700 dark:text-zinc-100 dark:hover:bg-zinc-800"
-        >
+        <button type="submit" disabled={pending} className={buttonSecondary}>
           기록
         </button>
       </form>
 
       {state.error && (
-        <p role="alert" className="mt-1.5 text-xs text-red-600 dark:text-red-400">
+        <p role="alert" className={`mt-1.5 ${errorText}`}>
           {state.error}
         </p>
       )}

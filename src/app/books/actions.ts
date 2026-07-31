@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { readBookForm } from "@/lib/books/schema";
-import { checkMinutes, checkProgress } from "@/lib/progress";
+import { checkMinutes, checkProgress, planUnitChange } from "@/lib/progress";
 import {
   checkNoteBody,
   checkNoteLocation,
@@ -434,6 +434,68 @@ export async function recordProgressAction(
   });
 
   if (error) return { error: toRpcMessage(error) };
+
+  revalidatePath("/");
+  revalidatePath(`/books/${reading.book_id}`);
+  return ACTION_IDLE;
+}
+
+/**
+ * 진행률 단위 전환 (PRD §3.1 F3).
+ *
+ * 종이책을 페이지수 없이 담으면 %로 시작하는데, 나중에 페이지수를 채워도
+ * 그 회차는 계속 %였다. 재독 말고는 빠져나갈 길이 없던 것을 여기서 연다.
+ * 허용 조건 판단은 순수 함수(planUnitChange)에 있다.
+ */
+export async function changeProgressUnitAction(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const { supabase } = await requireUser();
+
+  const readingId = formData.get("reading_id");
+  const to = formData.get("to");
+  if (typeof readingId !== "string" || (to !== "percent" && to !== "page")) {
+    return { error: "잘못된 요청입니다." };
+  }
+
+  const { data: reading, error: loadError } = await supabase
+    .from("readings")
+    .select("id, book_id, status, progress_unit, books(total_pages)")
+    .eq("id", readingId)
+    .single();
+
+  if (loadError || !reading) return { error: "독서 기록을 찾을 수 없습니다." };
+
+  // 기록이 하나라도 있으면 거부한다. 정확한 건수를 메시지에 넣어야 사용자가
+  // 무엇 때문에 막혔는지 안다.
+  const { count, error: countError } = await supabase
+    .from("progress_logs")
+    .select("id", { count: "exact", head: true })
+    .eq("reading_id", readingId);
+
+  if (countError) return { error: toMessage(countError) };
+
+  const plan = planUnitChange({
+    to,
+    from: reading.progress_unit as ProgressUnit,
+    status: reading.status as ReadingStatus,
+    totalPages: reading.books?.total_pages ?? null,
+    logCount: count ?? 0,
+  });
+
+  if (!plan.ok) return { error: plan.message };
+
+  const { error } = await supabase
+    .from("readings")
+    .update({
+      progress_unit: plan.progress_unit,
+      target_value: plan.target_value,
+      current_value: plan.current_value,
+    })
+    .eq("id", readingId);
+
+  if (error) return { error: toMessage(error) };
 
   revalidatePath("/");
   revalidatePath(`/books/${reading.book_id}`);

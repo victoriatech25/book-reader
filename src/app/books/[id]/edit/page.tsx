@@ -1,3 +1,4 @@
+import { quietLink } from "@/components/ui/styles";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
@@ -20,17 +21,12 @@ export default async function EditBookPage({ params }: { params: Promise<{ id: s
   if (!book) notFound();
 
   return (
-    <div className="flex flex-1 justify-center bg-zinc-50 px-6 py-12 dark:bg-zinc-950">
+    <div className="bg-background flex flex-1 justify-center px-6 py-12">
       <main className="w-full max-w-xl">
-        <Link
-          href={`/books/${book.id}`}
-          className="text-sm text-zinc-500 underline underline-offset-4 hover:text-zinc-900 dark:hover:text-zinc-100"
-        >
+        <Link href={`/books/${book.id}`} className={quietLink}>
           ← 상세로
         </Link>
-        <h1 className="mt-4 mb-8 text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
-          책 수정
-        </h1>
+        <h1 className="text-foreground mt-4 mb-8 text-2xl font-semibold tracking-tight">책 수정</h1>
 
         <BookForm
           action={updateBookAction}

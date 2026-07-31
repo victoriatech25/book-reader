@@ -67,6 +67,36 @@ test.describe.serial("진행률 기록", () => {
     await expect(page.locator('div[style*="width: 25%"]')).toBeVisible();
   });
 
+  // W7.5 — 종이책을 페이지수 없이 담으면 %로 굳어버리던 것을 푼다 (PRD §3.1 F3).
+  test("페이지수를 나중에 채우면 쪽 단위로 바꿀 수 있다", async () => {
+    await registerBook(page, "단위 전환 검증용");
+    // 형태만 종이책이고 페이지수가 없으므로 %로 시작한다.
+    await expect(page.getByText("0%", { exact: true })).toBeVisible();
+
+    // 페이지수가 없으면 쪽 단위로 못 간다고 알려준다.
+    await page.getByRole("button", { name: "페이지 단위로 바꾸기" }).click();
+    await expect(page.getByText(/페이지수가 없습니다/)).toBeVisible();
+
+    // 도서 수정에서 페이지수를 채운 뒤 다시 시도한다.
+    await page.getByRole("link", { name: "수정" }).click();
+    await page.getByLabel("형태", { exact: true }).selectOption("paper");
+    await page.getByLabel("페이지수").fill("300");
+    await page.getByRole("button", { name: "저장" }).click();
+    await expect(page).toHaveURL(/\/books\/[0-9a-f-]{36}$/);
+
+    await page.getByRole("button", { name: "페이지 단위로 바꾸기" }).click();
+    await expect(page.getByText("0 / 300쪽")).toBeVisible();
+
+    await page.getByLabel("현재 쪽").first().fill("150");
+    await page.getByRole("button", { name: "기록", exact: true }).click();
+    await expect(page.getByText("150 / 300쪽")).toBeVisible();
+
+    // 기록이 생긴 뒤로는 막는다 — 지난 기록이 다른 눈금으로 읽히게 된다.
+    await page.getByRole("button", { name: "퍼센트 단위로 바꾸기" }).click();
+    await expect(page.getByText(/진행 기록이 1건 있어/)).toBeVisible();
+    await expect(page.getByText("150 / 300쪽")).toBeVisible();
+  });
+
   test("전체 분량을 넘는 값은 거부하고 사유를 보여준다", async () => {
     await registerBook(page, "상한 검증용", 300);
 

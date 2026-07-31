@@ -5,6 +5,7 @@ import {
   checkProgress,
   formatDelta,
   formatProgress,
+  planUnitChange,
   progressDelta,
   progressPercent,
 } from "@/lib/progress";
@@ -153,5 +154,72 @@ describe("progressDelta / formatDelta", () => {
     expect(formatDelta(30, 45, "percent")).toBe("30% → 45%");
     expect(formatDelta(120, 180, "page")).toBe("120 → 180쪽");
     expect(formatDelta(null, 30, "percent")).toBe("0% → 30%");
+  });
+});
+
+describe("planUnitChange", () => {
+  const base = {
+    to: "page",
+    from: "percent",
+    status: "reading",
+    totalPages: 320,
+    logCount: 0,
+  } as const;
+
+  it("기록이 없으면 %에서 쪽으로 바꾼다 — 분량은 책의 페이지수가 된다", () => {
+    expect(planUnitChange(base)).toEqual({
+      ok: true,
+      progress_unit: "page",
+      target_value: 320,
+      current_value: 0,
+    });
+  });
+
+  it("쪽에서 %로 되돌리면 분량은 항상 100이다 (DB 제약 readings_percent_target)", () => {
+    expect(planUnitChange({ ...base, to: "percent", from: "page" })).toEqual({
+      ok: true,
+      progress_unit: "percent",
+      target_value: 100,
+      current_value: 0,
+    });
+  });
+
+  it("같은 단위로는 바꾸지 않는다", () => {
+    const result = planUnitChange({ ...base, to: "percent", from: "percent" });
+    expect(result.ok).toBe(false);
+    expect(result.ok === false && result.message).toContain("이미");
+  });
+
+  it.each(["finished", "dropped"] as const)("%s 회차의 단위는 바꿀 수 없다", (status) => {
+    const result = planUnitChange({ ...base, status });
+    expect(result.ok).toBe(false);
+    expect(result.ok === false && result.message).toContain("끝난 회차");
+  });
+
+  it("진행 기록이 있으면 거부하고 건수를 알려준다 — 지난 기록이 다른 눈금으로 읽힌다", () => {
+    const result = planUnitChange({ ...base, logCount: 7 });
+    expect(result.ok).toBe(false);
+    expect(result.ok === false && result.message).toContain("7건");
+  });
+
+  it("기록이 있으면 되돌리는 방향도 막는다", () => {
+    expect(planUnitChange({ ...base, to: "percent", from: "page", logCount: 1 }).ok).toBe(false);
+  });
+
+  it.each([null, 0])("페이지수가 %s 이면 쪽 단위로 못 바꾼다", (totalPages) => {
+    const result = planUnitChange({ ...base, totalPages });
+    expect(result.ok).toBe(false);
+    expect(result.ok === false && result.message).toContain("페이지수");
+  });
+
+  it("페이지수가 없어도 %로 되돌리는 것은 막지 않는다", () => {
+    expect(planUnitChange({ ...base, to: "percent", from: "page", totalPages: null }).ok).toBe(
+      true,
+    );
+  });
+
+  it("want·paused 회차도 바꿀 수 있다 — 아직 안 끝났으면 기록 전이다", () => {
+    expect(planUnitChange({ ...base, status: "want" }).ok).toBe(true);
+    expect(planUnitChange({ ...base, status: "paused" }).ok).toBe(true);
   });
 });

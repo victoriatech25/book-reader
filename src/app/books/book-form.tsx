@@ -3,6 +3,14 @@
 import Link from "next/link";
 import { useActionState, useState } from "react";
 
+import {
+  buttonPrimary,
+  errorText,
+  hint as hintClass,
+  input,
+  label as labelClass,
+  quietLink,
+} from "@/components/ui/styles";
 import { BOOK_FORMATS, BOOK_OWNERSHIPS, FORMAT_LABEL, OWNERSHIP_LABEL } from "@/lib/books/schema";
 
 import { ACTION_IDLE, type ActionState } from "./action-state";
@@ -41,9 +49,7 @@ export const EMPTY_BOOK: BookDefaults = {
   source_ref: "",
 };
 
-const inputClass =
-  "mt-1.5 w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 outline-none focus:border-zinc-900 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50 dark:focus:border-zinc-100";
-const labelClass = "block text-sm font-medium text-zinc-900 dark:text-zinc-100";
+const inputClass = `mt-1.5 w-full ${input}`;
 
 function Field({
   name,
@@ -62,7 +68,7 @@ function Field({
         {label}
       </label>
       {children}
-      {hint && <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">{hint}</p>}
+      {hint && <p className={hintClass}>{hint}</p>}
     </div>
   );
 }
@@ -178,8 +184,8 @@ export function BookForm({
         />
       </Field>
 
-      <details className="rounded-md border border-zinc-200 px-3 py-2 dark:border-zinc-800">
-        <summary className="cursor-pointer text-sm text-zinc-600 dark:text-zinc-400">
+      <details className="border-border rounded-md border px-3 py-2">
+        <summary className="text-muted-foreground cursor-pointer text-sm">
           자세히 (부제 · 역자 · ISBN · 표지 · 메모)
         </summary>
         <div className="mt-4 space-y-5">
@@ -234,23 +240,16 @@ export function BookForm({
       </details>
 
       {state.error && (
-        <p role="alert" className="text-sm text-red-600 dark:text-red-400">
+        <p role="alert" className={errorText}>
           {state.error}
         </p>
       )}
 
       <div className="flex items-center gap-3">
-        <button
-          type="submit"
-          disabled={pending}
-          className="rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-zinc-50 disabled:opacity-60 dark:bg-zinc-50 dark:text-zinc-900"
-        >
+        <button type="submit" disabled={pending} className={buttonPrimary}>
           {pending ? "저장 중..." : submitLabel}
         </button>
-        <Link
-          href={cancelHref}
-          className="text-sm text-zinc-500 underline underline-offset-4 hover:text-zinc-900 dark:hover:text-zinc-100"
-        >
+        <Link href={cancelHref} className={quietLink}>
           취소
         </Link>
       </div>
