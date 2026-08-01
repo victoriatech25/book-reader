@@ -30,8 +30,8 @@ test.describe.serial("PWA", () => {
     expect(response.ok()).toBe(true);
 
     const manifest = await response.json();
-    expect(manifest.name).toContain("book-reader");
-    expect(manifest.short_name).toBe("book-reader");
+    expect(manifest.name).toContain("독서대");
+    expect(manifest.short_name).toBe("독서대");
     // standalone이어야 브라우저 껍데기 없이 뜬다.
     expect(manifest.display).toBe("standalone");
     expect(manifest.start_url).toBe("/");

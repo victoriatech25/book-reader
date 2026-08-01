@@ -138,7 +138,7 @@ export default async function Home() {
     <div className="bg-background flex flex-1 justify-center px-6 py-12">
       <main id="main" className="w-full max-w-3xl">
         <div className="flex flex-wrap items-baseline justify-between gap-4">
-          <h1 className="text-foreground text-2xl font-semibold tracking-tight">book-reader</h1>
+          <h1 className="text-foreground text-2xl font-semibold tracking-tight">독서대</h1>
           <UserBadge email={user.email ?? "(이메일 없음)"} />
         </div>
 

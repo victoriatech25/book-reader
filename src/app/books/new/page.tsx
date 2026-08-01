@@ -6,7 +6,7 @@ import { loadTaxonomyOptions } from "@/lib/taxonomy/load";
 
 import { NewBookView } from "./new-book-view";
 
-export const metadata: Metadata = { title: "책 등록 · book-reader" };
+export const metadata: Metadata = { title: "책 등록 · 독서대" };
 
 export default async function NewBookPage() {
   const { categories, tagSuggestions } = await loadTaxonomyOptions();

@@ -36,10 +36,10 @@ const numeric = IBM_Plex_Mono({
 const themeScript = `(function(){try{var t=localStorage.getItem("theme");if(t==="light"||t==="dark"){document.documentElement.classList.add(t)}}catch(e){}})()`;
 
 export const metadata: Metadata = {
-  title: "book-reader",
+  title: "독서대",
   description: "읽은 책의 진행 상태와 한 줄 소감을 기록하는 개인 독서 관리 앱",
   // 홈 화면에 얹었을 때 iOS가 브라우저 껍데기 없이 띄우도록 한다.
-  appleWebApp: { capable: true, title: "book-reader", statusBarStyle: "default" },
+  appleWebApp: { capable: true, title: "독서대", statusBarStyle: "default" },
 };
 
 /**

@@ -11,8 +11,8 @@ import type { MetadataRoute } from "next";
  */
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "book-reader — 독서 기록",
-    short_name: "book-reader",
+    name: "독서대 — 독서 기록",
+    short_name: "독서대",
     description: "읽는 책의 진행 상태와 한 줄 소감을 기록하는 개인 독서 관리 앱",
     start_url: "/",
     display: "standalone",

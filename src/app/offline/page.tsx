@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 
-export const metadata: Metadata = { title: "오프라인 · book-reader" };
+export const metadata: Metadata = { title: "오프라인 · 독서대" };
 
 /**
  * 네트워크가 없고 캐시에도 없는 화면일 때 서비스워커가 대신 보여준다.

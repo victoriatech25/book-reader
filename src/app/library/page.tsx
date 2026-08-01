@@ -9,7 +9,7 @@ import { createServerSupabaseClient, getCurrentUser } from "@/lib/supabase/serve
 
 import { LibraryView } from "./library-view";
 
-export const metadata: Metadata = { title: "서재 · book-reader" };
+export const metadata: Metadata = { title: "서재 · 독서대" };
 
 export default async function LibraryPage() {
   const user = await getCurrentUser();

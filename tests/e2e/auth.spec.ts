@@ -12,7 +12,7 @@ test.describe("보호 라우트 (미로그인)", () => {
     await page.goto("/");
 
     await expect(page).toHaveURL(/\/login/);
-    await expect(page.getByRole("heading", { level: 1, name: "book-reader" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "독서대" })).toBeVisible();
   });
 
   test("보호된 경로는 next 파라미터에 그대로 담긴다", async ({ page }) => {

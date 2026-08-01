@@ -11,7 +11,7 @@ import { CategoryManager } from "./category-manager";
 import { ShelfManager } from "./shelf-manager";
 import { TagManager } from "./tag-manager";
 
-export const metadata: Metadata = { title: "설정 · book-reader" };
+export const metadata: Metadata = { title: "설정 · 독서대" };
 
 export default async function SettingsPage() {
   const user = await getCurrentUser();

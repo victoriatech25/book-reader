@@ -4,7 +4,7 @@ import { sanitizeNextPath } from "@/lib/auth/redirect";
 
 import { LoginForm } from "./login-form";
 
-export const metadata: Metadata = { title: "로그인 · book-reader" };
+export const metadata: Metadata = { title: "로그인 · 독서대" };
 
 const ERROR_MESSAGES: Record<string, string> = {
   link_invalid: "로그인 링크가 만료되었거나 이미 사용되었습니다. 다시 요청해주세요.",
@@ -22,7 +22,7 @@ export default async function LoginPage({
   return (
     <div className="bg-background flex flex-1 items-center justify-center px-6 py-16">
       <main id="main" className="w-full max-w-sm">
-        <h1 className="text-foreground text-2xl font-semibold tracking-tight">book-reader</h1>
+        <h1 className="text-foreground text-2xl font-semibold tracking-tight">독서대</h1>
         <p className="text-muted-foreground mt-2 mb-8 text-sm">
           이메일로 로그인 링크를 보내드립니다. 비밀번호는 없습니다.
         </p>
