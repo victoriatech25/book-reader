@@ -21,7 +21,7 @@
 
 ## 현재 상태
 
-**W7까지 완료 — 핵심 루프(등록 → 진행 기록 → 완독 → 소감·인용구)가 동작한다.** G3 실사용 컨펌 대기 중이며, 분야·태그·통계는 그 이후다. 자세한 내용과 주의점은 [docs/STATUS.md](docs/STATUS.md).
+**W13.5까지 완료 — 기능 개발과 전체 로컬 검증이 끝났고 배포 준비만 남았다.** 자세한 내용과 주의점은 [docs/STATUS.md](docs/STATUS.md), Vercel 배포 절차는 [docs/DEPLOYMENT-VERCEL.md](docs/DEPLOYMENT-VERCEL.md)를 참고한다.
 
 ## 개발
 
