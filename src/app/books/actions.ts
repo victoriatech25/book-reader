@@ -354,6 +354,9 @@ export async function createNoteAction(
 
   if (error) return { error: toMessage(error) };
 
+  // 대시보드가 최근 인용구를 보여준다(W10). 여기서 안 지우면 인용구를 남기고
+  // 홈으로 가도 옛 목록이 남는다.
+  revalidatePath("/");
   revalidatePath(`/books/${reading.book_id}`);
   return actionSaved();
 }
@@ -375,6 +378,8 @@ export async function toggleNoteFavoriteAction(formData: FormData): Promise<void
 
   await supabase.from("notes").update({ is_favorite: !note.is_favorite }).eq("id", noteId);
 
+  // 대시보드는 즐겨찾기를 위로 올려 보여준다.
+  revalidatePath("/");
   revalidatePath(`/books/${bookId}`);
 }
 
@@ -387,6 +392,7 @@ export async function deleteNoteAction(formData: FormData): Promise<void> {
 
   await supabase.from("notes").delete().eq("id", noteId);
 
+  revalidatePath("/");
   revalidatePath(`/books/${bookId}`);
 }
 

@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { actionSaved, type ActionState } from "@/app/books/action-state";
+import { isGoalMetric, isGoalPeriod, periodKeyFor, seoulToday } from "@/lib/stats/aggregate";
 import { checkCategoryColor, checkCategoryName } from "@/lib/taxonomy/category";
 import { checkShelfDescription, checkShelfName } from "@/lib/taxonomy/shelf";
 import { normalizeTagName, planTagMerge, tagKey } from "@/lib/taxonomy/tags";
@@ -307,4 +308,57 @@ export async function toggleShelfBookAction(formData: FormData): Promise<void> {
   // 설정 화면이 서재별 권수를 보여준다. 여기서 안 지우면 담자마자 설정으로
   // 넘어갔을 때 옛 숫자가 남는다.
   revalidatePath("/settings");
+}
+
+// ---------------------------------------------------------------------------
+// 목표 (PRD §3.1 F10) — 연간/월간, 지표는 권수 또는 시간(분)
+// ---------------------------------------------------------------------------
+
+/**
+ * 목표를 세우거나 고친다.
+ *
+ * 같은 (기간, 기간키, 지표) 조합은 하나뿐이다(DB unique). 두 번째로 세우면
+ * 새로 만드는 게 아니라 목표치를 갈아끼운다 — 사용자는 "올해 목표"를 하나로
+ * 생각하지 두 개를 만들었다고 생각하지 않는다.
+ */
+export async function setGoalAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const { supabase, user } = await requireUser();
+
+  const period = formData.get("period");
+  const metric = formData.get("metric");
+  if (!isGoalPeriod(period) || !isGoalMetric(metric)) {
+    return { error: "잘못된 요청입니다." };
+  }
+
+  const rawTarget = String(formData.get("target") ?? "").trim();
+  if (rawTarget === "") return { error: "목표치를 입력하세요." };
+
+  const target = Number(rawTarget);
+  if (!Number.isInteger(target) || target <= 0) {
+    return { error: "목표치는 1 이상의 정수여야 합니다." };
+  }
+
+  const periodKey = periodKeyFor(period, seoulToday());
+
+  const { error } = await supabase
+    .from("goals")
+    .upsert(
+      { user_id: user.id, period, period_key: periodKey, metric, target },
+      { onConflict: "user_id,period,period_key,metric" },
+    );
+
+  if (error) return { error: toMessage(error) };
+
+  revalidatePath("/");
+  return actionSaved();
+}
+
+export async function deleteGoalAction(formData: FormData): Promise<void> {
+  const { supabase } = await requireUser();
+
+  const id = formData.get("goal_id");
+  if (typeof id !== "string") return;
+
+  await supabase.from("goals").delete().eq("id", id);
+  revalidatePath("/");
 }
