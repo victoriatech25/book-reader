@@ -4,6 +4,14 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { actionSaved, type ActionState } from "@/app/books/action-state";
+import {
+  describeSummary,
+  isDuplicatePolicy,
+  planImport,
+  type DuplicatePolicy,
+  type ImportSummary,
+} from "@/lib/backup/import-plan";
+import { parseBackup } from "@/lib/backup/schema";
 import { isGoalMetric, isGoalPeriod, periodKeyFor, seoulToday } from "@/lib/stats/aggregate";
 import { checkCategoryColor, checkCategoryName } from "@/lib/taxonomy/category";
 import { checkShelfDescription, checkShelfName } from "@/lib/taxonomy/shelf";
@@ -361,4 +369,211 @@ export async function deleteGoalAction(formData: FormData): Promise<void> {
 
   await supabase.from("goals").delete().eq("id", id);
   revalidatePath("/");
+}
+
+// ---------------------------------------------------------------------------
+// 백업 가져오기 (PRD §3.2 F15)
+// ---------------------------------------------------------------------------
+
+/**
+ * 백업 파일을 서재에 얹는다.
+ *
+ * 지우고 덮어쓰지 않는다 — 실수로 올린 파일 하나에 서재가 사라지면 안 된다.
+ * 이미 있는 책은 정책에 따라 건너뛴다(planImport).
+ *
+ * 트랜잭션은 아니다. 책 단위로 넣으므로 중간에 끊기면 넣던 데까지 남고,
+ * 같은 파일을 다시 올리면 이미 들어간 책은 건너뛴다. 그래서 재시도가 안전하다.
+ */
+export async function importBackupAction(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const { supabase, user } = await requireUser();
+
+  const file = formData.get("file");
+  if (!(file instanceof File) || file.size === 0) {
+    return { error: "백업 파일을 고르세요." };
+  }
+
+  const policyRaw = formData.get("policy");
+  const policy: DuplicatePolicy = isDuplicatePolicy(policyRaw) ? policyRaw : "skip";
+
+  const parsed = parseBackup(await file.text());
+  if (!parsed.ok) return { error: parsed.message };
+
+  const backup = parsed.backup;
+
+  // -- 분류를 먼저 맞춘다. 이름으로 찾고 없으면 만든다. --------------------
+  const categoryId = await ensureByName(
+    supabase,
+    "categories",
+    backup.categories.map((c) => ({
+      user_id: user.id,
+      name: c.name,
+      color: c.color,
+      sort_order: c.sort_order,
+    })),
+  );
+  const shelfId = await ensureByName(
+    supabase,
+    "shelves",
+    backup.shelves.map((s) => ({
+      user_id: user.id,
+      name: s.name,
+      description: s.description,
+      sort_order: s.sort_order,
+    })),
+  );
+  const tagNames = [...new Set(backup.books.flatMap((b) => b.tags))];
+  const tagId = await ensureByName(
+    supabase,
+    "tags",
+    tagNames.map((name) => ({ user_id: user.id, name })),
+  );
+
+  // -- 무엇을 넣을지 정한다 -------------------------------------------------
+  const { data: existing } = await supabase.from("books").select("isbn13, title");
+  const plan = planImport(existing ?? [], backup.books, policy);
+
+  const summary: ImportSummary = {
+    books: 0,
+    readings: 0,
+    logs: 0,
+    notes: 0,
+    skipped: plan.skipped.length,
+  };
+
+  for (const item of plan.insert) {
+    const { data: inserted, error } = await supabase
+      .from("books")
+      .insert({
+        user_id: user.id,
+        title: item.title,
+        subtitle: item.subtitle,
+        authors: item.authors,
+        translators: item.translators,
+        publisher: item.publisher,
+        published_on: item.published_on,
+        isbn13: item.isbn13,
+        cover_url: item.cover_url,
+        total_pages: item.total_pages,
+        format: item.format,
+        ownership: item.ownership,
+        memo: item.memo,
+        source: item.source,
+        source_ref: item.source_ref as never,
+        category_id: item.category ? (categoryId.get(item.category) ?? null) : null,
+      })
+      .select("id")
+      .single();
+
+    if (error || !inserted) {
+      console.error(`[backup] "${item.title}" 저장 실패: ${error?.message}`);
+      continue;
+    }
+
+    summary.books += 1;
+
+    const links = item.tags
+      .map((name) => tagId.get(name))
+      .filter((id): id is string => typeof id === "string")
+      .map((id) => ({ book_id: inserted.id, tag_id: id }));
+    if (links.length > 0) await supabase.from("book_tags").insert(links);
+
+    const shelfLinks = item.shelves
+      .map((name) => shelfId.get(name))
+      .filter((id): id is string => typeof id === "string")
+      .map((id) => ({ shelf_id: id, book_id: inserted.id }));
+    if (shelfLinks.length > 0) await supabase.from("shelf_books").insert(shelfLinks);
+
+    for (const reading of item.readings) {
+      const { data: newReading, error: readingError } = await supabase
+        .from("readings")
+        .insert({
+          user_id: user.id,
+          book_id: inserted.id,
+          attempt_no: reading.attempt_no,
+          status: reading.status,
+          progress_unit: reading.progress_unit,
+          current_value: reading.current_value,
+          target_value: reading.target_value,
+          started_at: reading.started_at,
+          finished_at: reading.finished_at,
+          dropped_at: reading.dropped_at,
+          drop_reason: reading.drop_reason,
+          rating: reading.rating,
+          review: reading.review,
+          review_is_private: reading.review_is_private,
+          spoiler: reading.spoiler,
+          due_on: reading.due_on,
+        })
+        .select("id")
+        .single();
+
+      if (readingError || !newReading) {
+        console.error(`[backup] "${item.title}" ${reading.attempt_no}회독 저장 실패`);
+        continue;
+      }
+
+      summary.readings += 1;
+
+      if (reading.progress_logs.length > 0) {
+        const { error: logError } = await supabase.from("progress_logs").insert(
+          reading.progress_logs.map((log) => ({
+            user_id: user.id,
+            reading_id: newReading.id,
+            logged_on: log.logged_on,
+            value_from: log.value_from,
+            value_to: log.value_to,
+            minutes: log.minutes,
+            memo: log.memo,
+          })),
+        );
+        if (!logError) summary.logs += reading.progress_logs.length;
+      }
+
+      if (reading.notes.length > 0) {
+        const { error: noteError } = await supabase.from("notes").insert(
+          reading.notes.map((note) => ({
+            user_id: user.id,
+            reading_id: newReading.id,
+            kind: note.kind,
+            location: note.location,
+            body: note.body,
+            is_favorite: note.is_favorite,
+          })),
+        );
+        if (!noteError) summary.notes += reading.notes.length;
+      }
+    }
+  }
+
+  if (backup.goals.length > 0) {
+    await supabase.from("goals").upsert(
+      backup.goals.map((goal) => ({ user_id: user.id, ...goal })),
+      { onConflict: "user_id,period,period_key,metric" },
+    );
+  }
+
+  revalidateAll();
+  return actionSaved(describeSummary(summary));
+}
+
+/**
+ * 이름으로 찾고 없으면 만든다. 이름 → id 표를 돌려준다.
+ *
+ * 분야·태그·서재가 전부 같은 모양이라 한 함수로 묶었다. unique(user_id, name)
+ * 덕분에 upsert가 안전하다.
+ */
+async function ensureByName(
+  supabase: Awaited<ReturnType<typeof createServerSupabaseClient>>,
+  table: "categories" | "tags" | "shelves",
+  rows: { user_id: string; name: string }[],
+): Promise<Map<string, string>> {
+  if (rows.length > 0) {
+    await supabase.from(table).upsert(rows as never, { onConflict: "user_id,name" });
+  }
+
+  const { data } = await supabase.from(table).select("id, name");
+  return new Map((data ?? []).map((row) => [row.name, row.id]));
 }
