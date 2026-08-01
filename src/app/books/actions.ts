@@ -23,6 +23,8 @@ import {
   type ReadingStatus,
 } from "@/lib/reading-status";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { syncBookTags } from "@/lib/taxonomy/sync";
+import { checkTagNames, parseTagInput } from "@/lib/taxonomy/tags";
 
 import { ACTION_IDLE, actionSaved, type ActionState } from "./action-state";
 
@@ -63,6 +65,10 @@ export async function createBookAction(
 
   const { source_ref, ...input } = parsed.data;
 
+  const tagNames = parseTagInput(formData.get("tags") as string | null);
+  const tagCheck = checkTagNames(tagNames);
+  if (!tagCheck.ok) return { error: tagCheck.message };
+
   const { data: book, error } = await supabase
     .from("books")
     .insert({
@@ -91,6 +97,13 @@ export async function createBookAction(
     return { error: toMessage(readingError) };
   }
 
+  // 태그는 책이 생긴 뒤에야 붙일 수 있다(book_tags가 book_id를 참조한다).
+  // 여기서 실패해도 책은 살린다 — 태그는 나중에 수정 화면에서 다시 붙이면 된다.
+  if (tagNames.length > 0) {
+    const { error: tagError } = await syncBookTags(supabase, user.id, book.id, tagNames);
+    if (tagError) console.error(`[books] 태그 연결 실패: ${tagError}`);
+  }
+
   revalidatePath("/");
   redirect(`/books/${book.id}`);
 }
@@ -102,7 +115,7 @@ export async function updateBookAction(
   _prev: ActionState,
   formData: FormData,
 ): Promise<ActionState> {
-  const { supabase } = await requireUser();
+  const { supabase, user } = await requireUser();
 
   const bookId = formData.get("book_id");
   if (typeof bookId !== "string") return { error: "잘못된 요청입니다." };
@@ -115,8 +128,15 @@ export async function updateBookAction(
   void _ref;
   void _source;
 
+  const tagNames = parseTagInput(formData.get("tags") as string | null);
+  const tagCheck = checkTagNames(tagNames);
+  if (!tagCheck.ok) return { error: tagCheck.message };
+
   const { error } = await supabase.from("books").update(input).eq("id", bookId);
   if (error) return { error: toMessage(error) };
+
+  const { error: tagError } = await syncBookTags(supabase, user.id, bookId, tagNames);
+  if (tagError) return { error: tagError };
 
   revalidatePath("/");
   revalidatePath(`/books/${bookId}`);

@@ -6,7 +6,7 @@ import { buttonPrimary, errorText, input, quietLink } from "@/components/ui/styl
 import type { BookSearchItem } from "@/lib/book-search/kakao";
 
 import { createBookAction } from "../actions";
-import { BookForm, EMPTY_BOOK, type BookDefaults } from "../book-form";
+import { BookForm, EMPTY_BOOK, type BookDefaults, type CategoryOption } from "../book-form";
 
 type SearchState =
   | { kind: "idle" }
@@ -31,7 +31,13 @@ function toDefaults(item: BookSearchItem): BookDefaults {
   };
 }
 
-export function NewBookView() {
+export function NewBookView({
+  categories,
+  tagSuggestions,
+}: {
+  categories: CategoryOption[];
+  tagSuggestions: string[];
+}) {
   const [query, setQuery] = useState("");
   const [search, setSearch] = useState<SearchState>({ kind: "idle" });
   const [defaults, setDefaults] = useState<BookDefaults | null>(null);
@@ -74,6 +80,8 @@ export function NewBookView() {
           defaults={defaults}
           submitLabel="서재에 담기"
           cancelHref="/"
+          categories={categories}
+          tagSuggestions={tagSuggestions}
         />
       </div>
     );

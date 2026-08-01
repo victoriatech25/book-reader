@@ -5,6 +5,9 @@ import { notFound } from "next/navigation";
 import { updateBookAction } from "@/app/books/actions";
 import { BookForm, EMPTY_BOOK } from "@/app/books/book-form";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { loadTaxonomyOptions } from "@/lib/taxonomy/load";
+import { loadBookTagNames } from "@/lib/taxonomy/sync";
+import { formatTagInput } from "@/lib/taxonomy/tags";
 
 export default async function EditBookPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -13,12 +16,17 @@ export default async function EditBookPage({ params }: { params: Promise<{ id: s
   const { data: book } = await supabase
     .from("books")
     .select(
-      "id, title, subtitle, authors, translators, publisher, published_on, isbn13, cover_url, total_pages, format, ownership, memo, source",
+      "id, title, subtitle, authors, translators, publisher, published_on, isbn13, cover_url, total_pages, format, ownership, memo, category_id, source",
     )
     .eq("id", id)
     .maybeSingle();
 
   if (!book) notFound();
+
+  const [{ categories, tagSuggestions }, tagNames] = await Promise.all([
+    loadTaxonomyOptions(),
+    loadBookTagNames(supabase, book.id),
+  ]);
 
   return (
     <div className="bg-background flex flex-1 justify-center px-6 py-12">
@@ -33,6 +41,8 @@ export default async function EditBookPage({ params }: { params: Promise<{ id: s
           bookId={book.id}
           cancelHref={`/books/${book.id}`}
           submitLabel="저장"
+          categories={categories}
+          tagSuggestions={tagSuggestions}
           defaults={{
             ...EMPTY_BOOK,
             title: book.title,
@@ -47,6 +57,8 @@ export default async function EditBookPage({ params }: { params: Promise<{ id: s
             format: book.format,
             ownership: book.ownership,
             memo: book.memo ?? "",
+            category_id: book.category_id ?? "",
+            tags: formatTagInput(tagNames),
             source: book.source,
           }}
         />

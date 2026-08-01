@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { UserBadge } from "@/components/user-badge";
-import { buttonPrimary, card } from "@/components/ui/styles";
+import { buttonPrimary, card, quietLink } from "@/components/ui/styles";
 import { progressPercent } from "@/lib/progress";
 import { STATUS_LABEL, type ProgressUnit, type ReadingStatus } from "@/lib/reading-status";
 import { createServerSupabaseClient, getCurrentUser } from "@/lib/supabase/server";
@@ -47,9 +47,12 @@ export default async function Home() {
           <UserBadge email={user.email ?? "(이메일 없음)"} />
         </div>
 
-        <div className="mt-6">
+        <div className="mt-6 flex items-center gap-4">
           <Link href="/books/new" className={`inline-block ${buttonPrimary}`}>
             책 등록
+          </Link>
+          <Link href="/settings" className={quietLink}>
+            설정
           </Link>
         </div>
 
