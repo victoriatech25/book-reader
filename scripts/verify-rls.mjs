@@ -6,6 +6,9 @@
  *   3) RLS 격리: 사용자 B가 A의 데이터를 조회/수정/삭제/RPC 호출할 수 없는가
  *   4) 제약: 소감 500자, 별점 0.5 배수, percent 단위의 target_value=100
  *   5) 재독: attempt_no 증가와 (book_id, attempt_no) 유일성, 이전 회차 보존
+ *   6) 분류(W8): 태그·서재와 조인 테이블(book_tags, shelf_books)의 RLS.
+ *      조인 테이블은 user_id 컬럼이 없고 부모의 소유권을 exists로 따라가므로
+ *      "남의 책에 내 태그" / "내 책에 남의 태그" 양쪽을 다 막아야 한다.
  *
  * 외부 의존성 없이 Data API(PostgREST)와 Auth API를 직접 호출한다.
  * PostgREST를 그대로 때리므로 앱이 나중에 쓰게 될 경로와 동일한 층을 검증한다.
@@ -489,6 +492,210 @@ async function main() {
     "2회독은 want로 시작한다",
     attempts.body?.[1]?.status === "want",
     String(attempts.body?.[1]?.status),
+  );
+
+  // -- 6. 분류 — 태그 · 서재 · 조인 테이블 RLS (W8) --------------------------
+  section("6. 분류 (태그 · 서재 · 조인 테이블)");
+
+  // A의 태그와 서재
+  const tagA = await rest("/tags", {
+    method: "POST",
+    token: a.token,
+    body: { user_id: a.id, name: "SF" },
+  });
+  check("A가 태그 생성 → 허용", tagA.ok, `status=${tagA.status}`);
+  const tagAId = tagA.body?.[0]?.id;
+
+  const duplicateTag = await rest("/tags", {
+    method: "POST",
+    token: a.token,
+    body: { user_id: a.id, name: "SF" },
+  });
+  check(
+    "같은 사용자·같은 태그 이름 중복 → 거부",
+    !duplicateTag.ok,
+    `status=${duplicateTag.status}`,
+  );
+
+  const tagBSameName = await rest("/tags", {
+    method: "POST",
+    token: b.token,
+    body: { user_id: b.id, name: "SF" },
+  });
+  check("다른 사용자가 같은 태그 이름 → 허용", tagBSameName.ok, `status=${tagBSameName.status}`);
+  const tagBId = tagBSameName.body?.[0]?.id;
+
+  const longTag = await rest("/tags", {
+    method: "POST",
+    token: a.token,
+    body: { user_id: a.id, name: "ㄱ".repeat(31) },
+  });
+  check("태그 이름 31자 → 거부", !longTag.ok, `status=${longTag.status}`);
+
+  // book_tags — 부모 소유권을 따라간다
+  const linkOwn = await rest("/book_tags", {
+    method: "POST",
+    token: a.token,
+    body: { book_id: bookId, tag_id: tagAId },
+  });
+  check("A가 자기 책에 자기 태그 연결 → 허용", linkOwn.ok, `status=${linkOwn.status}`);
+
+  const linkDuplicate = await rest("/book_tags", {
+    method: "POST",
+    token: a.token,
+    body: { book_id: bookId, tag_id: tagAId },
+  });
+  check("같은 (책, 태그) 중복 연결 → 거부", !linkDuplicate.ok, `status=${linkDuplicate.status}`);
+
+  // with check 가 부모 양쪽을 다 보는지 — 여기가 이 스키마에서 가장 미묘한 곳이다.
+  const linkForeignTag = await rest("/book_tags", {
+    method: "POST",
+    token: a.token,
+    body: { book_id: bookId, tag_id: tagBId },
+  });
+  check(
+    "A가 자기 책에 B의 태그 연결 → 거부",
+    !linkForeignTag.ok,
+    `status=${linkForeignTag.status}`,
+  );
+
+  const linkForeignBook = await rest("/book_tags", {
+    method: "POST",
+    token: b.token,
+    body: { book_id: bookId, tag_id: tagBId },
+  });
+  check(
+    "B가 A의 책에 자기 태그 연결 → 거부",
+    !linkForeignBook.ok,
+    `status=${linkForeignBook.status}`,
+  );
+
+  const bSeesLinks = await rest("/book_tags?select=book_id", { token: b.token });
+  check(
+    "B는 A의 book_tags를 볼 수 없다",
+    bSeesLinks.body?.length === 0,
+    `rows=${bSeesLinks.body?.length}`,
+  );
+
+  const bDeletesLink = await rest(`/book_tags?book_id=eq.${bookId}`, {
+    method: "DELETE",
+    token: b.token,
+  });
+  check(
+    "B가 A의 book_tags DELETE → 0행 반영",
+    Array.isArray(bDeletesLink.body) && bDeletesLink.body.length === 0,
+    `status=${bDeletesLink.status}`,
+  );
+
+  const linkSurvives = await rest(`/book_tags?select=tag_id&book_id=eq.${bookId}`, {
+    token: a.token,
+  });
+  check(
+    "A의 연결은 그대로 남아 있다",
+    linkSurvives.body?.length === 1,
+    `rows=${linkSurvives.body?.length}`,
+  );
+
+  // 서재
+  const shelfA = await rest("/shelves", {
+    method: "POST",
+    token: a.token,
+    body: { user_id: a.id, name: "2026 상반기" },
+  });
+  check("A가 서재 생성 → 허용", shelfA.ok, `status=${shelfA.status}`);
+  const shelfAId = shelfA.body?.[0]?.id;
+
+  const shelfB = await rest("/shelves", {
+    method: "POST",
+    token: b.token,
+    body: { user_id: b.id, name: "B의 서재" },
+  });
+  const shelfBId = shelfB.body?.[0]?.id;
+
+  const shelfLink = await rest("/shelf_books", {
+    method: "POST",
+    token: a.token,
+    body: { shelf_id: shelfAId, book_id: bookId },
+  });
+  check("A가 자기 서재에 자기 책 담기 → 허용", shelfLink.ok, `status=${shelfLink.status}`);
+
+  const shelfForeignBook = await rest("/shelf_books", {
+    method: "POST",
+    token: b.token,
+    body: { shelf_id: shelfBId, book_id: bookId },
+  });
+  check(
+    "B가 자기 서재에 A의 책 담기 → 거부",
+    !shelfForeignBook.ok,
+    `status=${shelfForeignBook.status}`,
+  );
+
+  const shelfForeignShelf = await rest("/shelf_books", {
+    method: "POST",
+    token: a.token,
+    body: { shelf_id: shelfBId, book_id: bookId },
+  });
+  check(
+    "A가 B의 서재에 자기 책 담기 → 거부",
+    !shelfForeignShelf.ok,
+    `status=${shelfForeignShelf.status}`,
+  );
+
+  const longShelfName = await rest("/shelves", {
+    method: "POST",
+    token: a.token,
+    body: { user_id: a.id, name: "ㄱ".repeat(51) },
+  });
+  check("서재 이름 51자 → 거부", !longShelfName.ok, `status=${longShelfName.status}`);
+
+  // 분야 — 삭제해도 책은 남고 category_id만 null이 된다 (on delete set null)
+  const newCategory = await rest("/categories", {
+    method: "POST",
+    token: a.token,
+    body: { user_id: a.id, name: "임시분야", sort_order: 99 },
+  });
+  const newCategoryId = newCategory.body?.[0]?.id;
+
+  await rest(`/books?id=eq.${bookId}`, {
+    method: "PATCH",
+    token: a.token,
+    body: { category_id: newCategoryId },
+  });
+
+  await rest(`/categories?id=eq.${newCategoryId}`, { method: "DELETE", token: a.token });
+
+  const orphaned = await rest(`/books?select=id,category_id&id=eq.${bookId}`, { token: a.token });
+  check("분야를 지워도 책은 남는다", orphaned.body?.length === 1, `rows=${orphaned.body?.length}`);
+  check(
+    "분야를 지우면 category_id가 null이 된다 (on delete set null)",
+    orphaned.body?.[0]?.category_id === null,
+    String(orphaned.body?.[0]?.category_id),
+  );
+
+  const badColor = await rest("/categories", {
+    method: "POST",
+    token: a.token,
+    body: { user_id: a.id, name: "색깔검증", color: "빨강" },
+  });
+  check("분야 색이 #rrggbb 가 아니면 → 거부", !badColor.ok, `status=${badColor.status}`);
+
+  // 태그를 지우면 연결도 cascade 로 사라지고 책은 남는다
+  await rest(`/tags?id=eq.${tagAId}`, { method: "DELETE", token: a.token });
+
+  const linksAfterTagDelete = await rest(`/book_tags?select=tag_id&book_id=eq.${bookId}`, {
+    token: a.token,
+  });
+  check(
+    "태그를 지우면 book_tags도 함께 사라진다 (cascade)",
+    linksAfterTagDelete.body?.length === 0,
+    `rows=${linksAfterTagDelete.body?.length}`,
+  );
+
+  const bookAfterTagDelete = await rest(`/books?select=id&id=eq.${bookId}`, { token: a.token });
+  check(
+    "태그를 지워도 책은 남는다",
+    bookAfterTagDelete.body?.length === 1,
+    `rows=${bookAfterTagDelete.body?.length}`,
   );
 }
 

@@ -53,6 +53,9 @@ export const bookInputSchema = z.object({
   format: z.enum(BOOK_FORMATS, { message: "형태는 전자책 또는 종이책이어야 합니다." }),
   ownership: z.enum(BOOK_OWNERSHIPS, { message: "소장 형태가 올바르지 않습니다." }),
   memo: z.string().trim().max(2000, "메모가 너무 깁니다.").nullable(),
+  // 분야는 책당 1개(PRD §2.1 B). 미지정을 허용한다 — 위시리스트에 담는
+  // 시점에는 어느 분야인지 모를 수 있다.
+  category_id: z.uuid("분야 선택이 올바르지 않습니다.").nullable(),
   source: z.enum(["manual", "kakao"]),
   source_ref: z.record(z.string(), z.unknown()).nullable(),
 });
@@ -109,6 +112,7 @@ export function readBookForm(formData: FormData) {
     format: text(formData.get("format")) ?? "ebook",
     ownership: text(formData.get("ownership")) ?? "own",
     memo: text(formData.get("memo")),
+    category_id: text(formData.get("category_id")),
     source: text(formData.get("source")) ?? "manual",
     source_ref: json(formData.get("source_ref")),
   });

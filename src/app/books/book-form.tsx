@@ -28,6 +28,8 @@ export type BookDefaults = {
   format: string;
   ownership: string;
   memo: string;
+  category_id: string;
+  tags: string;
   source: string;
   source_ref: string;
 };
@@ -45,6 +47,8 @@ export const EMPTY_BOOK: BookDefaults = {
   format: "ebook",
   ownership: "own",
   memo: "",
+  category_id: "",
+  tags: "",
   source: "manual",
   source_ref: "",
 };
@@ -73,18 +77,25 @@ function Field({
   );
 }
 
+export type CategoryOption = { id: string; name: string };
+
 export function BookForm({
   action,
   defaults,
   submitLabel,
   bookId,
   cancelHref,
+  categories,
+  tagSuggestions,
 }: {
   action: (prev: ActionState, formData: FormData) => Promise<ActionState>;
   defaults: BookDefaults;
   submitLabel: string;
   bookId?: string;
   cancelHref: string;
+  categories: CategoryOption[];
+  /** 이미 쓰고 있는 태그. datalist로 자동완성해 표기 흔들림을 줄인다. */
+  tagSuggestions: string[];
 }) {
   const [state, formAction, pending] = useActionState(action, ACTION_IDLE);
   const [format, setFormat] = useState(defaults.format);
@@ -161,6 +172,40 @@ export function BookForm({
               </option>
             ))}
           </select>
+        </Field>
+      </div>
+
+      <div className="grid gap-5 sm:grid-cols-2">
+        <Field name="category_id" label="분야" hint="통계의 분류 축입니다. 책당 하나만 고릅니다.">
+          <select
+            id="category_id"
+            name="category_id"
+            defaultValue={defaults.category_id}
+            className={inputClass}
+          >
+            <option value="">선택 안 함</option>
+            {categories.map((category) => (
+              <option key={category.id} value={category.id}>
+                {category.name}
+              </option>
+            ))}
+          </select>
+        </Field>
+
+        <Field name="tags" label="태그" hint="쉼표로 구분합니다. 여러 개 붙일 수 있습니다.">
+          <input
+            id="tags"
+            name="tags"
+            list="tag-suggestions"
+            defaultValue={defaults.tags}
+            placeholder="SF, 번역서, 재독 예정"
+            className={inputClass}
+          />
+          <datalist id="tag-suggestions">
+            {tagSuggestions.map((name) => (
+              <option key={name} value={name} />
+            ))}
+          </datalist>
         </Field>
       </div>
 

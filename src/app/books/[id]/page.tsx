@@ -16,11 +16,13 @@ import { formatNoteLocation, formatRating, NOTE_KIND_LABEL, type NoteKind } from
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { ConfirmSubmit } from "@/components/confirm-submit";
 import { card, dangerLink, quietLink } from "@/components/ui/styles";
+import { categoryColor } from "@/lib/taxonomy/category";
 
 import { FinishDialog, ReviewEditor } from "./finish-dialog";
 import { NoteForm } from "./note-form";
 import { ProgressForm } from "./progress-form";
 import { NewAttemptButton, ReadingActions } from "./reading-actions";
+import { ShelfPicker } from "./shelf-picker";
 import { UnitSwitch } from "./unit-switch";
 
 export default async function BookDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -30,7 +32,7 @@ export default async function BookDetailPage({ params }: { params: Promise<{ id:
   const { data: book } = await supabase
     .from("books")
     .select(
-      "id, title, subtitle, authors, translators, publisher, published_on, isbn13, cover_url, total_pages, format, ownership, memo, source",
+      "id, title, subtitle, authors, translators, publisher, published_on, isbn13, cover_url, total_pages, format, ownership, memo, source, category_id, categories(id, name, color, sort_order)",
     )
     .eq("id", id)
     .maybeSingle();
@@ -45,6 +47,20 @@ export default async function BookDetailPage({ params }: { params: Promise<{ id:
     )
     .eq("book_id", id)
     .order("attempt_no", { ascending: false });
+
+  // 분류(분야·태그·서재). 상세는 읽는 화면이라 한 번에 받아 온다.
+  const [{ data: bookTags }, { data: shelves }, { data: shelfBooks }] = await Promise.all([
+    supabase.from("book_tags").select("tags(id, name)").eq("book_id", id),
+    supabase.from("shelves").select("id, name").order("sort_order"),
+    supabase.from("shelf_books").select("shelf_id").eq("book_id", id),
+  ]);
+
+  const tags = (bookTags ?? [])
+    .map((row) => row.tags)
+    .filter((tag): tag is { id: string; name: string } => tag !== null)
+    .sort((a, b) => a.name.localeCompare(b.name, "ko-KR"));
+
+  const shelfMembership = new Set((shelfBooks ?? []).map((row) => row.shelf_id));
 
   const attempts = readings ?? [];
   const latest = attempts[0];
@@ -121,11 +137,43 @@ export default async function BookDetailPage({ params }: { params: Promise<{ id:
           </div>
         </div>
 
+        {(book.categories || tags.length > 0) && (
+          <div className="mt-5 flex flex-wrap items-center gap-2">
+            {book.categories && (
+              <span
+                className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs"
+                style={{
+                  // 색을 안 고른 분야는 앱이 팔레트에서 배정한다 (PRD §2.3).
+                  backgroundColor: `${categoryColor(book.categories.color, book.categories.sort_order)}1f`,
+                  color: categoryColor(book.categories.color, book.categories.sort_order),
+                }}
+              >
+                {book.categories.name}
+              </span>
+            )}
+            {tags.map((tag) => (
+              <span
+                key={tag.id}
+                className="border-border text-muted-foreground rounded-full border px-3 py-1 text-xs"
+              >
+                #{tag.name}
+              </span>
+            ))}
+          </div>
+        )}
+
         {book.memo && (
           <p className="border-border bg-card text-muted-foreground mt-6 rounded-md border px-3 py-2 text-sm whitespace-pre-wrap">
             {book.memo}
           </p>
         )}
+
+        <section className="mt-6">
+          <h2 className="text-muted-foreground text-xs font-medium">서재</h2>
+          <div className="mt-2">
+            <ShelfPicker bookId={book.id} shelves={shelves ?? []} memberOf={shelfMembership} />
+          </div>
+        </section>
 
         <div className="mt-6 flex items-center gap-4">
           <Link href={`/books/${book.id}/edit`} className={quietLink}>
