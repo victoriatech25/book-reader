@@ -120,7 +120,8 @@ test.describe.serial("분야 · 태그 · 서재", () => {
 
     await expect(page.getByLabel("과학 이름")).toHaveCount(0);
 
-    await page.goto("/");
+    // W10부터 홈은 대시보드다. 책 목록은 서재에 있다.
+    await page.goto("/library");
     await expect(page.getByRole("link", { name: /분류 검증용 책/ })).toBeVisible();
   });
 
@@ -130,7 +131,7 @@ test.describe.serial("분야 · 태그 · 서재", () => {
     await page.getByRole("button", { name: "서재 만들기" }).click();
     await expect(page.getByLabel("2026 상반기 이름")).toHaveValue("2026 상반기");
 
-    await page.goto("/");
+    await page.goto("/library");
     await page.getByRole("link", { name: /분류 검증용 책/ }).click();
 
     const shelfButton = page.getByRole("button", { name: /2026 상반기/ });
@@ -150,7 +151,7 @@ test.describe.serial("분야 · 태그 · 서재", () => {
   });
 
   test("서재에 담은 권수가 설정에 반영된다", async () => {
-    await page.goto("/");
+    await page.goto("/library");
     await page.getByRole("link", { name: /분류 검증용 책/ }).click();
     await page.getByRole("button", { name: /2026 상반기/ }).click();
     await expect(page.getByRole("button", { name: /2026 상반기/ })).toHaveAttribute(

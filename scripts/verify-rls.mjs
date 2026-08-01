@@ -9,6 +9,7 @@
  *   6) 분류(W8): 태그·서재와 조인 테이블(book_tags, shelf_books)의 RLS.
  *      조인 테이블은 user_id 컬럼이 없고 부모의 소유권을 exists로 따라가므로
  *      "남의 책에 내 태그" / "내 책에 남의 태그" 양쪽을 다 막아야 한다.
+ *   7) 목표(W10): 기간키 형식·지표·유일성 제약과 RLS.
  *
  * 외부 의존성 없이 Data API(PostgREST)와 Auth API를 직접 호출한다.
  * PostgREST를 그대로 때리므로 앱이 나중에 쓰게 될 경로와 동일한 층을 검증한다.
@@ -696,6 +697,109 @@ async function main() {
     "태그를 지워도 책은 남는다",
     bookAfterTagDelete.body?.length === 1,
     `rows=${bookAfterTagDelete.body?.length}`,
+  );
+
+  // -- 7. 목표 (W10) --------------------------------------------------------
+  section("7. 목표 — 제약과 격리");
+
+  const yearGoal = await rest("/goals", {
+    method: "POST",
+    token: a.token,
+    body: { user_id: a.id, period: "year", period_key: "2026", metric: "books", target: 24 },
+  });
+  check("연간 권수 목표 → 허용", yearGoal.ok, `status=${yearGoal.status}`);
+  const yearGoalId = yearGoal.body?.[0]?.id;
+
+  const monthGoal = await rest("/goals", {
+    method: "POST",
+    token: a.token,
+    body: { user_id: a.id, period: "month", period_key: "2026-08", metric: "minutes", target: 600 },
+  });
+  check("월간 시간 목표 → 허용", monthGoal.ok, `status=${monthGoal.status}`);
+
+  // 앱이 upsert(onConflict)로 목표치를 갈아끼우므로 유일성이 지켜져야 한다.
+  const duplicateGoal = await rest("/goals", {
+    method: "POST",
+    token: a.token,
+    body: { user_id: a.id, period: "year", period_key: "2026", metric: "books", target: 50 },
+  });
+  check("같은 기간·지표 목표 중복 → 거부", !duplicateGoal.ok, `status=${duplicateGoal.status}`);
+
+  const upserted = await rest("/goals?on_conflict=user_id,period,period_key,metric", {
+    method: "POST",
+    token: a.token,
+    prefer: "resolution=merge-duplicates,return=representation",
+    body: { user_id: a.id, period: "year", period_key: "2026", metric: "books", target: 30 },
+  });
+  check(
+    "같은 조합을 upsert → 목표치가 갈아끼워진다",
+    upserted.ok && upserted.body?.[0]?.target === 30,
+    `status=${upserted.status} target=${upserted.body?.[0]?.target}`,
+  );
+
+  const badPeriodKey = await rest("/goals", {
+    method: "POST",
+    token: a.token,
+    body: { user_id: a.id, period: "year", period_key: "2026-08", metric: "books", target: 10 },
+  });
+  check("연간인데 기간키가 2026-08 → 거부", !badPeriodKey.ok, `status=${badPeriodKey.status}`);
+
+  const badMonthKey = await rest("/goals", {
+    method: "POST",
+    token: a.token,
+    body: { user_id: a.id, period: "month", period_key: "2026-13", metric: "books", target: 10 },
+  });
+  check("월간인데 13월 → 거부", !badMonthKey.ok, `status=${badMonthKey.status}`);
+
+  // PRD §3.1 F10에서 페이지 지표는 제외했다.
+  const badMetric = await rest("/goals", {
+    method: "POST",
+    token: a.token,
+    body: { user_id: a.id, period: "year", period_key: "2027", metric: "pages", target: 10 },
+  });
+  check("지표가 pages → 거부", !badMetric.ok, `status=${badMetric.status}`);
+
+  const zeroTarget = await rest("/goals", {
+    method: "POST",
+    token: a.token,
+    body: { user_id: a.id, period: "year", period_key: "2027", metric: "books", target: 0 },
+  });
+  check("목표치 0 → 거부", !zeroTarget.ok, `status=${zeroTarget.status}`);
+
+  const bSeesGoals = await rest("/goals?select=id", { token: b.token });
+  check(
+    "B는 A의 목표를 볼 수 없다",
+    bSeesGoals.body?.length === 0,
+    `rows=${bSeesGoals.body?.length}`,
+  );
+
+  const bUpdatesGoal = await rest(`/goals?id=eq.${yearGoalId}`, {
+    method: "PATCH",
+    token: b.token,
+    body: { target: 1 },
+  });
+  check(
+    "B가 A의 목표 UPDATE → 0행 반영",
+    Array.isArray(bUpdatesGoal.body) && bUpdatesGoal.body.length === 0,
+    `status=${bUpdatesGoal.status}`,
+  );
+
+  const goalIntact = await rest(`/goals?select=target&id=eq.${yearGoalId}`, { token: a.token });
+  check(
+    "A의 목표는 그대로다",
+    goalIntact.body?.[0]?.target === 30,
+    String(goalIntact.body?.[0]?.target),
+  );
+
+  const bForgesGoal = await rest("/goals", {
+    method: "POST",
+    token: b.token,
+    body: { user_id: a.id, period: "year", period_key: "2027", metric: "books", target: 5 },
+  });
+  check(
+    "B가 user_id를 A로 위조해 목표 생성 → 거부",
+    !bForgesGoal.ok,
+    `status=${bForgesGoal.status}`,
   );
 }
 

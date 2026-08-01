@@ -118,10 +118,11 @@ test.describe.serial("도서 등록과 상태 전이", () => {
     await expect(page.getByRole("heading", { level: 1, name: "수정 후 제목" })).toBeVisible();
   });
 
-  test("등록한 책이 홈 목록에 보이고, 삭제하면 사라진다", async () => {
+  // W10부터 홈은 대시보드다(읽는 중만 보인다). 전체 목록은 서재에 있다.
+  test("등록한 책이 서재에 보이고, 삭제하면 사라진다", async () => {
     await registerBook(page, "삭제 검증용 책");
 
-    await page.goto("/");
+    await page.goto("/library");
     await expect(page.getByRole("link", { name: /삭제 검증용 책/ })).toBeVisible();
 
     await page.getByRole("link", { name: /삭제 검증용 책/ }).click();
@@ -136,6 +137,8 @@ test.describe.serial("도서 등록과 상태 전이", () => {
     await confirm.getByRole("button", { name: "삭제" }).click();
 
     await expect(page).toHaveURL("/");
+
+    await page.goto("/library");
     await expect(page.getByRole("link", { name: /삭제 검증용 책/ })).toHaveCount(0);
   });
 });
