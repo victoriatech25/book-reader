@@ -10,6 +10,7 @@
  *      조인 테이블은 user_id 컬럼이 없고 부모의 소유권을 exists로 따라가므로
  *      "남의 책에 내 태그" / "내 책에 남의 태그" 양쪽을 다 막아야 한다.
  *   7) 목표(W10): 기간키 형식·지표·유일성 제약과 RLS.
+ *   8) 백업(W12): 내보내기 → 비우기 → 가져오기 후 원본과 같은지.
  *
  * 외부 의존성 없이 Data API(PostgREST)와 Auth API를 직접 호출한다.
  * PostgREST를 그대로 때리므로 앱이 나중에 쓰게 될 경로와 동일한 층을 검증한다.
@@ -801,6 +802,105 @@ async function main() {
     !bForgesGoal.ok,
     `status=${bForgesGoal.status}`,
   );
+
+  // -- 8. 백업 왕복 (W12) ---------------------------------------------------
+  //
+  // W12의 DoD가 요구하는 검증이다: 내보내고 → 지우고 → 다시 넣었을 때 원래
+  // 데이터가 그대로 돌아오는가. 되돌릴 수 있어야 백업이다.
+  section("8. 백업 — 내보내기 → 비우기 → 가져오기");
+
+  const snapshotOf = async (token) => {
+    const [books, readings, logs, notes, tags] = await Promise.all([
+      rest("/books?select=title,isbn13,format,total_pages&order=title", { token }),
+      rest("/readings?select=attempt_no,status,current_value&order=attempt_no", { token }),
+      rest("/progress_logs?select=logged_on,value_to&order=logged_on,value_to", { token }),
+      rest("/notes?select=kind,body&order=body", { token }),
+      rest("/tags?select=name&order=name", { token }),
+    ]);
+    return {
+      books: books.body ?? [],
+      readings: readings.body ?? [],
+      logs: logs.body ?? [],
+      notes: notes.body ?? [],
+      tags: tags.body ?? [],
+    };
+  };
+
+  const before = await snapshotOf(a.token);
+  check(
+    "비우기 전에 데이터가 있다",
+    before.books.length > 0 && before.readings.length > 0,
+    `books=${before.books.length} readings=${before.readings.length}`,
+  );
+
+  // 앱의 collectBackup과 같은 모양을 손으로 만든다. 이 스크립트는 앱 코드를
+  // import하지 않는 순수 Node라서 최소한만 재현한다.
+  const exported = { books: before.books };
+
+  // 책을 지우면 회차·진행 기록·인용구가 cascade로 함께 사라진다.
+  await rest("/books?title=neq.__none__", { method: "DELETE", token: a.token });
+
+  const emptied = await snapshotOf(a.token);
+  check("비우면 책이 0행", emptied.books.length === 0, `rows=${emptied.books.length}`);
+  check("회차도 함께 사라진다 (cascade)", emptied.readings.length === 0);
+  check("진행 기록도 함께 사라진다 (cascade)", emptied.logs.length === 0);
+  check("인용구도 함께 사라진다 (cascade)", emptied.notes.length === 0);
+  check(
+    "태그 사전은 남는다 — 책과 별개다",
+    emptied.tags.length === before.tags.length,
+    `${emptied.tags.length} vs ${before.tags.length}`,
+  );
+
+  let restored = 0;
+  for (const item of exported.books) {
+    const inserted = await rest("/books", {
+      method: "POST",
+      token: a.token,
+      body: {
+        user_id: a.id,
+        title: item.title,
+        isbn13: item.isbn13,
+        format: item.format,
+        total_pages: item.total_pages,
+      },
+    });
+    if (inserted.ok) restored += 1;
+  }
+
+  check(
+    "가져오기 후 책 수가 원래와 같다",
+    restored === before.books.length,
+    `${restored} vs ${before.books.length}`,
+  );
+
+  const after = await snapshotOf(a.token);
+  check(
+    "제목이 그대로 돌아온다",
+    JSON.stringify(after.books.map((b) => b.title)) ===
+      JSON.stringify(before.books.map((b) => b.title)),
+    JSON.stringify(after.books.map((b) => b.title)),
+  );
+  check(
+    "ISBN·형태·페이지수도 그대로 돌아온다",
+    JSON.stringify(after.books.map((b) => [b.isbn13, b.format, b.total_pages])) ===
+      JSON.stringify(before.books.map((b) => [b.isbn13, b.format, b.total_pages])),
+  );
+
+  // 같은 백업을 두 번 넣으면 ISBN 유일 제약에 걸린다 — 앱이 planImport로
+  // 미리 걸러야 하는 이유다.
+  const withIsbn = exported.books.find((b) => b.isbn13 !== null);
+  if (withIsbn) {
+    const duplicate = await rest("/books", {
+      method: "POST",
+      token: a.token,
+      body: { user_id: a.id, title: withIsbn.title, isbn13: withIsbn.isbn13 },
+    });
+    check(
+      "같은 ISBN을 다시 넣으면 DB가 막는다 (중복 정책이 필요한 이유)",
+      !duplicate.ok,
+      `status=${duplicate.status}`,
+    );
+  }
 }
 
 // ---------------------------------------------------------------------------

@@ -6,6 +6,7 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { quietLink } from "@/components/ui/styles";
 import { createServerSupabaseClient, getCurrentUser } from "@/lib/supabase/server";
 
+import { BackupManager } from "./backup-manager";
 import { CategoryManager } from "./category-manager";
 import { ShelfManager } from "./shelf-manager";
 import { TagManager } from "./tag-manager";
@@ -45,7 +46,7 @@ export default async function SettingsPage() {
         </Link>
         <h1 className="text-foreground mt-4 text-2xl font-semibold tracking-tight">설정</h1>
         <p className="text-muted-foreground mt-2 mb-10 text-sm">
-          분야·태그·서재를 정리하고 테마를 고릅니다. 목표는 대시보드에 있습니다.
+          분야·태그·서재를 정리하고, 테마를 고르고, 기록을 백업합니다. 목표는 대시보드에 있습니다.
         </p>
 
         <div className="space-y-12">
@@ -82,6 +83,8 @@ export default async function SettingsPage() {
               bookCount: shelf.shelf_books.length,
             }))}
           />
+
+          <BackupManager />
         </div>
       </main>
     </div>
