@@ -21,14 +21,17 @@ const numeric = IBM_Plex_Mono({
 });
 
 /**
- * 첫 페인트 전에 테마 클래스를 붙인다. 이 스크립트가 없으면 라이트로 그려진
- * 뒤 다크로 뒤집혀 깜빡인다. .light / .dark 중 하나를 항상 붙이므로
- * globals.css의 prefers-color-scheme 폴백은 JS가 꺼졌을 때만 걸린다.
+ * 사용자가 직접 고른 테마만 클래스로 박는다.
  *
- * 토글 UI는 W11에서 붙인다. localStorage의 theme 키를 미리 읽어두어 그때
- * 값을 쓰기만 하면 되도록 했다.
+ * 아무것도 안 골랐으면(=시스템) 클래스를 붙이지 않는다. 그러면 globals.css의
+ * prefers-color-scheme 규칙이 그대로 먹어서, OS 설정이 바뀌면 JS 없이 CSS가
+ * 알아서 따라간다 — matchMedia 리스너를 두고 클래스를 갈아끼우는 것보다
+ * 움직이는 부품이 적고, JS가 꺼져 있어도 동작한다.
+ *
+ * 인라인으로 두는 이유는 첫 페인트 전에 실행되어야 하기 때문이다. 나중에
+ * 붙이면 라이트로 그려진 뒤 다크로 뒤집혀 깜빡인다.
  */
-const themeScript = `(function(){try{var t=localStorage.getItem("theme");if(t!=="light"&&t!=="dark"){t=window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light"}document.documentElement.classList.add(t)}catch(e){document.documentElement.classList.add("light")}})()`;
+const themeScript = `(function(){try{var t=localStorage.getItem("theme");if(t==="light"||t==="dark"){document.documentElement.classList.add(t)}}catch(e){}})()`;
 
 export const metadata: Metadata = {
   title: "book-reader",
@@ -45,7 +48,19 @@ export default function RootLayout({
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
-      <body className="flex min-h-full flex-col">{children}</body>
+      <body className="flex min-h-full flex-col">
+        {/*
+          키보드로 들어온 사람이 화면마다 반복되는 네비게이션을 매번 지나치지
+          않도록 한다. 평소에는 감춰져 있다가 탭으로 포커스가 오면 나타난다.
+        */}
+        <a
+          href="#main"
+          className="bg-card text-foreground border-border focus:ring-ring/50 sr-only rounded-md border px-4 py-2 text-sm focus:not-sr-only focus:absolute focus:top-3 focus:left-3 focus:z-50 focus:ring-2"
+        >
+          본문 바로가기
+        </a>
+        {children}
+      </body>
     </html>
   );
 }

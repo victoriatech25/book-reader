@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
+import { ThemeToggle } from "@/components/theme-toggle";
 import { quietLink } from "@/components/ui/styles";
 import { createServerSupabaseClient, getCurrentUser } from "@/lib/supabase/server";
 
@@ -38,16 +39,26 @@ export default async function SettingsPage() {
 
   return (
     <div className="bg-background flex flex-1 justify-center px-6 py-12">
-      <main className="w-full max-w-xl">
+      <main id="main" className="w-full max-w-xl">
         <Link href="/" className={quietLink}>
           ← 홈
         </Link>
         <h1 className="text-foreground mt-4 text-2xl font-semibold tracking-tight">설정</h1>
         <p className="text-muted-foreground mt-2 mb-10 text-sm">
-          분야·태그·서재를 정리합니다. 목표·백업·테마는 이후 단위에서 붙습니다.
+          분야·태그·서재를 정리하고 테마를 고릅니다. 목표는 대시보드에 있습니다.
         </p>
 
         <div className="space-y-12">
+          <section>
+            <h2 className="text-foreground text-base font-semibold">테마</h2>
+            <p className="text-muted-foreground mt-1 text-sm">
+              기본은 시스템 설정을 따릅니다. 직접 고르면 OS와 무관하게 고정됩니다.
+            </p>
+            <div className="mt-3">
+              <ThemeToggle idPrefix="settings-theme" />
+            </div>
+          </section>
+
           <CategoryManager
             categories={(categories ?? []).map((category) => ({
               ...category,

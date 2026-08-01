@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
+import { ThemeToggle } from "@/components/theme-toggle";
 import { UserBadge } from "@/components/user-badge";
 import { buttonPrimary, card, quietLink } from "@/components/ui/styles";
 import { formatDate } from "@/lib/format";
@@ -135,7 +136,7 @@ export default async function Home() {
 
   return (
     <div className="bg-background flex flex-1 justify-center px-6 py-12">
-      <main className="w-full max-w-3xl">
+      <main id="main" className="w-full max-w-3xl">
         <div className="flex flex-wrap items-baseline justify-between gap-4">
           <h1 className="text-foreground text-2xl font-semibold tracking-tight">book-reader</h1>
           <UserBadge email={user.email ?? "(이메일 없음)"} />
@@ -151,6 +152,9 @@ export default async function Home() {
           <Link href="/settings" className={quietLink}>
             설정
           </Link>
+          <div className="ml-auto">
+            <ThemeToggle idPrefix="home-theme" />
+          </div>
         </div>
 
         {/* -- 올해 요약 -------------------------------------------------- */}
