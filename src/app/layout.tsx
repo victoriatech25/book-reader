@@ -1,5 +1,7 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { IBM_Plex_Mono } from "next/font/google";
+import { ServiceWorkerRegistrar } from "@/components/service-worker";
+
 import "./globals.css";
 
 /*
@@ -36,6 +38,19 @@ const themeScript = `(function(){try{var t=localStorage.getItem("theme");if(t===
 export const metadata: Metadata = {
   title: "book-reader",
   description: "읽은 책의 진행 상태와 한 줄 소감을 기록하는 개인 독서 관리 앱",
+  // 홈 화면에 얹었을 때 iOS가 브라우저 껍데기 없이 띄우도록 한다.
+  appleWebApp: { capable: true, title: "book-reader", statusBarStyle: "default" },
+};
+
+/**
+ * 주소창·상태바 색. 라이트/다크 각각 배경과 같은 값이라야 화면이 이어져 보인다.
+ * globals.css의 --background와 같은 색이다.
+ */
+export const viewport: Viewport = {
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#faf9f7" },
+    { media: "(prefers-color-scheme: dark)", color: "#1c1a18" },
+  ],
 };
 
 export default function RootLayout({
@@ -60,6 +75,7 @@ export default function RootLayout({
           본문 바로가기
         </a>
         {children}
+        <ServiceWorkerRegistrar />
       </body>
     </html>
   );
