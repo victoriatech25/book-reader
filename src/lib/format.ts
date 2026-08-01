@@ -16,3 +16,22 @@ export function formatDate(value: string | null | undefined): string {
   if (Number.isNaN(date.getTime())) return "-";
   return DATE_FORMAT.format(date);
 }
+
+const YEAR_FORMAT = new Intl.DateTimeFormat("en-US", {
+  timeZone: "Asia/Seoul",
+  year: "numeric",
+});
+
+/**
+ * 연도만 뽑는다. 서재의 연도 필터가 쓴다.
+ *
+ * new Date().getFullYear()를 쓰면 실행 환경의 시간대를 따라가서, 12월 31일
+ * 밤에 완독한 책이 서버와 브라우저에서 다른 해로 잡힌다. 표시와 같은
+ * 서울 기준으로 고정한다.
+ */
+export function yearOf(value: string | null | undefined): string | null {
+  if (!value) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  return YEAR_FORMAT.format(date);
+}

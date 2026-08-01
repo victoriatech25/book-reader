@@ -51,6 +51,9 @@ export default async function Home() {
           <Link href="/books/new" className={`inline-block ${buttonPrimary}`}>
             책 등록
           </Link>
+          <Link href="/library" className={quietLink}>
+            서재
+          </Link>
           <Link href="/settings" className={quietLink}>
             설정
           </Link>
@@ -139,7 +142,11 @@ export default async function Home() {
         )}
 
         <p className="text-muted-foreground mt-6 text-xs">
-          필터·정렬이 있는 서재 화면은 W9에서 만듭니다. 지금은 최근 순 20권만 보여줍니다.
+          최근 순 20권입니다. 전체를 보거나 분야·태그로 찾으려면{" "}
+          <Link href="/library" className={`${quietLink} text-xs`}>
+            서재
+          </Link>
+          로 갑니다.
         </p>
       </main>
     </div>
