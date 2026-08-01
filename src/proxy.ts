@@ -3,7 +3,25 @@ import { NextResponse, type NextRequest } from "next/server";
 import { updateSession, withCookiesFrom } from "@/lib/supabase/middleware";
 
 /** 로그인 없이 접근할 수 있는 경로 */
-const PUBLIC_PATHS = ["/login", "/auth/confirm"];
+const PUBLIC_PATHS = [
+  "/login",
+  "/auth/confirm",
+  // 오프라인 안내는 세션을 확인할 수 없을 때 보여주는 화면이다.
+  "/offline",
+  /*
+   * PWA 자산 (W13).
+   *
+   * 브라우저는 이것들을 로그인 상태와 무관하게 가져간다. 보호 라우트로 두면
+   * 로그인 페이지 HTML이 돌아와서 서비스워커 등록이 통째로 실패하고, 설치
+   * 배너도 안 뜬다.
+   *
+   * 셋 다 사용자 데이터를 담지 않는다 — 매니페스트는 앱 이름과 색, 아이콘은
+   * 코드로 그린 그림, sw.js는 캐시 규칙이다.
+   */
+  "/manifest.webmanifest",
+  "/icons",
+  "/sw.js",
+];
 
 function isPublic(pathname: string): boolean {
   return PUBLIC_PATHS.some((path) => pathname === path || pathname.startsWith(`${path}/`));
