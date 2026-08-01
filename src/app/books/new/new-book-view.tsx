@@ -82,6 +82,7 @@ export function NewBookView({
           cancelHref="/"
           categories={categories}
           tagSuggestions={tagSuggestions}
+          showAlreadyRead
         />
       </div>
     );

@@ -13,6 +13,8 @@ import {
 } from "@/components/ui/styles";
 import { BOOK_FORMATS, BOOK_OWNERSHIPS, FORMAT_LABEL, OWNERSHIP_LABEL } from "@/lib/books/schema";
 
+import { ReviewFields } from "./[id]/review-fields";
+
 import { ACTION_IDLE, type ActionState } from "./action-state";
 
 export type BookDefaults = {
@@ -87,6 +89,7 @@ export function BookForm({
   cancelHref,
   categories,
   tagSuggestions,
+  showAlreadyRead = false,
 }: {
   action: (prev: ActionState, formData: FormData) => Promise<ActionState>;
   defaults: BookDefaults;
@@ -96,9 +99,14 @@ export function BookForm({
   categories: CategoryOption[];
   /** 이미 쓰고 있는 태그. datalist로 자동완성해 표기 흔들림을 줄인다. */
   tagSuggestions: string[];
+  /** 등록 화면에서만 "이미 읽은 책"을 받는다 (W13.5). */
+  showAlreadyRead?: boolean;
 }) {
   const [state, formAction, pending] = useActionState(action, ACTION_IDLE);
   const [format, setFormat] = useState(defaults.format);
+  // 이미 읽은 책 (W13.5). 등록 화면에서만 쓴다 — 수정 화면에는 이미 회차가
+  // 있고, 완독 처리는 상세 화면의 완독 모달이 맡는다.
+  const [alreadyRead, setAlreadyRead] = useState(false);
 
   return (
     <form action={formAction} className="space-y-5">
@@ -208,6 +216,48 @@ export function BookForm({
           </datalist>
         </Field>
       </div>
+
+      {showAlreadyRead && (
+        <div className="border-border rounded-md border p-4">
+          <label className="flex items-center gap-2 text-sm font-medium">
+            <input
+              type="checkbox"
+              name="already_read"
+              checked={alreadyRead}
+              onChange={(event) => setAlreadyRead(event.target.checked)}
+            />
+            이미 다 읽은 책이에요
+          </label>
+          <p className={hintClass}>
+            앱을 쓰기 전에 읽은 책입니다. 등록하면 바로 완독이 되고 통계에 잡힙니다.
+          </p>
+
+          {alreadyRead && (
+            <div className="mt-4 space-y-5">
+              <Field
+                name="finished_month"
+                label="완독 시기"
+                hint="년-월까지만 받습니다. 오래된 책의 날짜를 정확히 기억하긴 어렵습니다."
+              >
+                <input
+                  id="finished_month"
+                  name="finished_month"
+                  type="month"
+                  required
+                  max={new Date().toISOString().slice(0, 7)}
+                  className={inputClass}
+                />
+              </Field>
+
+              <ReviewFields idPrefix="already-read" />
+
+              <p className={hintClass}>
+                읽은 시간은 기록에 없으므로 독서 시간 통계에는 잡히지 않습니다.
+              </p>
+            </div>
+          )}
+        </div>
+      )}
 
       <Field
         name="total_pages"
