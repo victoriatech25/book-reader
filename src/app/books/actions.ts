@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
+import { buildFinishedReading, checkFinishedMonth } from "@/lib/books/finished-input";
 import { readBookForm } from "@/lib/books/schema";
 import { checkMinutes, checkProgress, planUnitChange } from "@/lib/progress";
 import {
@@ -69,6 +70,35 @@ export async function createBookAction(
   const tagCheck = checkTagNames(tagNames);
   if (!tagCheck.ok) return { error: tagCheck.message };
 
+  /*
+   * 이미 읽은 책 (W13.5).
+   *
+   * 앱을 쓰기 전에 읽은 책을 넣어야 통계가 의미를 갖는다. 등록과 동시에
+   * 완독으로 만들고 별점·소감을 함께 받는다.
+   *
+   * 책을 만들기 전에 전부 검증한다 — 뒤에서 걸리면 책만 덩그러니 남는다.
+   */
+  const alreadyRead = formData.get("already_read") === "on";
+  let finished: ReturnType<typeof buildFinishedReading> | null = null;
+  let review: ReturnType<typeof readReviewFields> | null = null;
+
+  if (alreadyRead) {
+    const monthCheck = checkFinishedMonth(formData.get("finished_month") as string | null);
+    if (!monthCheck.ok) return { error: monthCheck.message };
+
+    review = readReviewFields(formData);
+    if (review.error !== null) return { error: review.error };
+
+    finished = buildFinishedReading({
+      month: monthCheck.month,
+      // 형태·페이지수에서 단위가 정해지는 규칙은 새 책과 똑같다.
+      progress: initialProgress({
+        format: parsed.data.format,
+        total_pages: parsed.data.total_pages,
+      }),
+    });
+  }
+
   const { data: book, error } = await supabase
     .from("books")
     .insert({
@@ -88,7 +118,7 @@ export async function createBookAction(
   const { error: readingError } = await supabase.from("readings").insert({
     user_id: user.id,
     book_id: book.id,
-    ...initialProgress(book),
+    ...(finished ? { ...finished, ...(review?.fields ?? {}) } : initialProgress(book)),
   });
 
   if (readingError) {
