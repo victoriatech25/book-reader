@@ -51,7 +51,13 @@ function Cover({ book, className }: { book: LibraryBook; className: string }) {
   return (
     // 표지는 외부 도메인이라 next/image 대신 img를 쓴다.
     // eslint-disable-next-line @next/next/no-img-element
-    <img src={book.coverUrl} alt="" className={`object-cover ${className}`} />
+    <img
+      src={book.coverUrl}
+      alt=""
+      loading="lazy"
+      decoding="async"
+      className={`object-cover ${className}`}
+    />
   );
 }
 

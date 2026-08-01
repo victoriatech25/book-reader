@@ -13,7 +13,7 @@ export default async function NewBookPage() {
 
   return (
     <div className="bg-background flex flex-1 justify-center px-6 py-12">
-      <main className="w-full max-w-xl">
+      <main id="main" className="w-full max-w-xl">
         <Link href="/" className={quietLink}>
           ← 홈
         </Link>

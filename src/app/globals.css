@@ -186,9 +186,11 @@
 }
 
 /*
- * JS가 꺼져 있으면 layout.tsx의 스크립트가 .light/.dark를 못 붙인다.
- * 그 경우에만 OS 설정을 따른다. 스크립트가 돌면 둘 중 하나가 항상 붙으므로
- * 이 규칙은 선택자에서 탈락한다.
+ * 시스템 모드(사용자가 아무것도 안 고른 상태)의 정식 경로.
+ *
+ * 그때는 .light/.dark 를 붙이지 않으므로 이 규칙이 그대로 먹고, OS 설정이
+ * 바뀌면 CSS가 알아서 따라간다. 직접 고른 경우에만 클래스가 붙어 이 규칙이
+ * 선택자에서 탈락한다.
  */
 @media (prefers-color-scheme: dark) {
   :root:not(.light):not(.dark) {
@@ -243,6 +245,16 @@
   body {
     @apply bg-background text-foreground;
     -webkit-font-smoothing: antialiased;
+  }
+
+  /*
+   * 키보드로 옮겨 다닐 때 지금 어디에 있는지 보여야 한다.
+   * :focus가 아니라 :focus-visible을 쓴다 — 마우스로 누른 버튼에까지 테두리가
+   * 남으면 지저분하다.
+   */
+  :focus-visible {
+    @apply ring-ring/60 rounded-sm ring-2 ring-offset-1 outline-none;
+    --tw-ring-offset-color: var(--background);
   }
 
   /* 제목은 세리프. "읽는 것"과 "조작하는 것"을 글꼴로 구분한다. */

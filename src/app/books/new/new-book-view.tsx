@@ -135,6 +135,8 @@ export function NewBookView({
                   <img
                     src={item.coverUrl}
                     alt=""
+                    loading="lazy"
+                    decoding="async"
                     className="h-16 w-11 shrink-0 rounded-sm object-cover"
                   />
                 ) : (

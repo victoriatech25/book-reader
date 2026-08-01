@@ -72,7 +72,7 @@ export default async function LibraryPage() {
 
   return (
     <div className="bg-background flex flex-1 justify-center px-6 py-12">
-      <main className="w-full max-w-5xl">
+      <main id="main" className="w-full max-w-5xl">
         <div className="flex items-baseline justify-between gap-4">
           <Link href="/" className={quietLink}>
             ← 홈

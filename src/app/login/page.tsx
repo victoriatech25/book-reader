@@ -21,7 +21,7 @@ export default async function LoginPage({
 
   return (
     <div className="bg-background flex flex-1 items-center justify-center px-6 py-16">
-      <main className="w-full max-w-sm">
+      <main id="main" className="w-full max-w-sm">
         <h1 className="text-foreground text-2xl font-semibold tracking-tight">book-reader</h1>
         <p className="text-muted-foreground mt-2 mb-8 text-sm">
           이메일로 로그인 링크를 보내드립니다. 비밀번호는 없습니다.
