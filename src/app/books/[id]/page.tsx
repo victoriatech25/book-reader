@@ -15,6 +15,7 @@ import {
 import { formatNoteLocation, formatRating, NOTE_KIND_LABEL, type NoteKind } from "@/lib/reviews";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { ConfirmSubmit } from "@/components/confirm-submit";
+import { HomeIcon } from "@/components/ui/icons";
 import { card, dangerLink, quietLink } from "@/components/ui/styles";
 import { categoryColor } from "@/lib/taxonomy/category";
 
@@ -111,7 +112,7 @@ export default async function BookDetailPage({ params }: { params: Promise<{ id:
     <div className="bg-background flex flex-1 justify-center px-6 py-12">
       <main id="main" className="w-full max-w-xl">
         <Link href="/" className={quietLink}>
-          ← 홈
+          <HomeIcon />홈
         </Link>
 
         <div className="mt-6 flex gap-5">

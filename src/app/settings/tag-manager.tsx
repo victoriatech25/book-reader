@@ -4,6 +4,7 @@ import { useActionState } from "react";
 
 import { ACTION_IDLE } from "@/app/books/action-state";
 import { ConfirmSubmit } from "@/components/confirm-submit";
+import { Select } from "@/components/ui/select";
 import { buttonSecondary, errorText, input } from "@/components/ui/styles";
 
 import { deleteTagAction, mergeTagsAction, renameTagAction } from "./actions";
@@ -69,32 +70,32 @@ function TagMerge({ tags }: { tags: Tag[] }) {
   if (tags.length < 2) return null;
 
   return (
-    <form action={formAction} className="border-border mt-6 rounded-md border p-4">
+    <form action={formAction} className="border-border mt-6 rounded-xl border p-4">
       <h3 className="text-foreground text-sm font-medium">태그 합치기</h3>
       <p className="text-muted-foreground mt-1 text-xs">
         왼쪽 태그가 붙은 책들을 오른쪽 태그로 옮기고, 왼쪽 태그를 지웁니다.
       </p>
 
       <div className="mt-3 flex flex-wrap items-center gap-2">
-        <select name="from" aria-label="합칠 태그" defaultValue="" className={`${input} py-1`}>
+        <Select name="from" aria-label="합칠 태그" defaultValue="">
           <option value="">합칠 태그</option>
           {tags.map((tag) => (
             <option key={tag.id} value={tag.name}>
               #{tag.name} ({tag.bookCount})
             </option>
           ))}
-        </select>
+        </Select>
 
         <span className="text-muted-foreground text-sm">→</span>
 
-        <select name="into" aria-label="남길 태그" defaultValue="" className={`${input} py-1`}>
+        <Select name="into" aria-label="남길 태그" defaultValue="">
           <option value="">남길 태그</option>
           {tags.map((tag) => (
             <option key={tag.id} value={tag.name}>
               #{tag.name} ({tag.bookCount})
             </option>
           ))}
-        </select>
+        </Select>
 
         <button type="submit" disabled={pending} className={buttonSecondary}>
           {pending ? "합치는 중..." : "합치기"}

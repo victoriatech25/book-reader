@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
+import { BrandMark } from "@/components/brand-mark";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { LibraryIcon, SettingsIcon } from "@/components/ui/icons";
 import { UserBadge } from "@/components/user-badge";
 import { buttonPrimary, card, quietLink } from "@/components/ui/styles";
 import { formatDate } from "@/lib/format";
@@ -138,18 +140,27 @@ export default async function Home() {
     <div className="bg-background flex flex-1 justify-center px-6 py-12">
       <main id="main" className="w-full max-w-3xl">
         <div className="flex flex-wrap items-baseline justify-between gap-4">
-          <h1 className="text-foreground text-2xl font-semibold tracking-tight">독서대</h1>
+          {/*
+            마크는 인라인으로 둔다. h1을 flex로 만들면 컨테이너의 items-baseline이
+            글자가 아니라 svg 아래끝을 기준으로 잡아 UserBadge와 어긋난다.
+          */}
+          <h1 className="text-foreground text-2xl font-semibold tracking-tight">
+            <BrandMark className="mr-2 inline-block size-[1.05em] align-[-0.16em]" />
+            독서대
+          </h1>
           <UserBadge email={user.email ?? "(이메일 없음)"} />
         </div>
 
         <div className="mt-6 flex flex-wrap items-center gap-4">
-          <Link href="/books/new" className={`inline-block ${buttonPrimary}`}>
+          <Link href="/books/new" className={buttonPrimary}>
             책 등록
           </Link>
           <Link href="/library" className={quietLink}>
+            <LibraryIcon />
             서재
           </Link>
           <Link href="/settings" className={quietLink}>
+            <SettingsIcon />
             설정
           </Link>
           <div className="ml-auto">

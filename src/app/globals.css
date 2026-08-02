@@ -56,6 +56,7 @@
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
+  --color-elevated: var(--elevated);
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
@@ -112,6 +113,8 @@
   --foreground: oklch(0.255 0.008 65); /* #2A2724 먹색 — 순검정 아님 */
   --card: oklch(0.995 0.002 75);
   --card-foreground: oklch(0.255 0.008 65);
+  /* 트랙 위로 떠오른 면(세그먼티드 컨트롤의 알약). 어느 테마에서도 --secondary보다 위다. */
+  --elevated: oklch(0.999 0.001 75);
   --popover: oklch(0.995 0.002 75);
   --popover-foreground: oklch(0.255 0.008 65);
   --primary: oklch(0.305 0.012 65);
@@ -134,7 +137,8 @@
   --chart-4: oklch(0.7 0.11 80);
   --chart-5: oklch(0.47 0.07 20);
 
-  --radius: 0.5rem;
+  /* 앱 컨트롤은 웹 폼보다 모서리가 둥글다. 여기를 올리면 rounded-* 눈금이 함께 올라간다. */
+  --radius: 0.625rem;
 
   --sidebar: oklch(0.96 0.004 75);
   --sidebar-foreground: oklch(0.255 0.008 65);
@@ -154,6 +158,8 @@
   --foreground: oklch(0.925 0.004 75);
   --card: oklch(0.272 0.006 65);
   --card-foreground: oklch(0.925 0.004 75);
+  /* 다크에서는 card가 secondary보다 어둡다. 떠오른 면은 반대로 더 밝아야 한다. */
+  --elevated: oklch(0.385 0.008 65);
   --popover: oklch(0.272 0.006 65);
   --popover-foreground: oklch(0.925 0.004 75);
   --primary: oklch(0.9 0.006 75);
@@ -185,21 +191,76 @@
   --sidebar-ring: oklch(0.58 0.025 65);
 }
 
+/* --- 세피아: 미색 종이 (직접 골라야만 켜진다) ---------------------------- */
+/*
+ * 라이트는 종이에 가깝게 밝고, 다크는 밤에 맞춰 어둡다. 그 사이가 없었다.
+ *
+ * 여기는 밝기를 라이트(0.977)와 다크(0.228) 어느 쪽으로도 몰지 않은 0.9 언저리에
+ * 두고, 노랑 쪽 채도를 조금 올려 오래된 책장(冊張) 색을 만든다. 흰 바탕이
+ * 쏘아붙이지 않고 검은 바탕처럼 글자가 번지지도 않는 구간이다.
+ *
+ * 글자는 순먹색보다 살짝 풀어 대비를 9:1 근처로 맞췄다. 라이트(약 13:1)보다
+ * 낮지만 본문 기준(4.5:1)에는 여유가 있다 — 대비를 낮추는 것이 이 테마의 목적이다.
+ *
+ * 클래스 이름에 theme- 접두사가 붙는 이유는 lib/theme.ts의 THEME_CLASS 주석에 있다.
+ * color-scheme은 light다. 폼 컨트롤·스크롤바가 밝은 바탕에 맞아야 한다.
+ */
+.theme-sepia {
+  color-scheme: light;
+
+  --background: oklch(0.905 0.022 82);
+  --foreground: oklch(0.33 0.02 60);
+  --card: oklch(0.938 0.018 82);
+  --card-foreground: oklch(0.33 0.02 60);
+  --elevated: oklch(0.962 0.014 82);
+  --popover: oklch(0.938 0.018 82);
+  --popover-foreground: oklch(0.33 0.02 60);
+  --primary: oklch(0.375 0.025 60);
+  --primary-foreground: oklch(0.955 0.014 82);
+  --secondary: oklch(0.872 0.024 82);
+  --secondary-foreground: oklch(0.355 0.022 60);
+  --muted: oklch(0.872 0.024 82);
+  --muted-foreground: oklch(0.475 0.024 68);
+  --accent: oklch(0.85 0.03 80);
+  --accent-foreground: oklch(0.33 0.02 60);
+  --destructive: oklch(0.5 0.16 27);
+  --border: oklch(0.822 0.026 80);
+  --input: oklch(0.822 0.026 80);
+  --ring: oklch(0.56 0.045 65);
+
+  /* 바탕이 밝지 않으므로 차트 색도 라이트보다 한 단 낮춰야 구분이 산다. */
+  --chart-1: oklch(0.52 0.11 55);
+  --chart-2: oklch(0.55 0.08 145);
+  --chart-3: oklch(0.48 0.09 245);
+  --chart-4: oklch(0.63 0.12 80);
+  --chart-5: oklch(0.44 0.08 20);
+
+  --sidebar: oklch(0.885 0.024 82);
+  --sidebar-foreground: oklch(0.33 0.02 60);
+  --sidebar-primary: oklch(0.375 0.025 60);
+  --sidebar-primary-foreground: oklch(0.955 0.014 82);
+  --sidebar-accent: oklch(0.85 0.03 80);
+  --sidebar-accent-foreground: oklch(0.33 0.02 60);
+  --sidebar-border: oklch(0.822 0.026 80);
+  --sidebar-ring: oklch(0.56 0.045 65);
+}
+
 /*
  * 시스템 모드(사용자가 아무것도 안 고른 상태)의 정식 경로.
  *
- * 그때는 .light/.dark 를 붙이지 않으므로 이 규칙이 그대로 먹고, OS 설정이
+ * 그때는 테마 클래스를 붙이지 않으므로 이 규칙이 그대로 먹고, OS 설정이
  * 바뀌면 CSS가 알아서 따라간다. 직접 고른 경우에만 클래스가 붙어 이 규칙이
- * 선택자에서 탈락한다.
+ * 선택자에서 탈락한다 — 세피아도 여기서 걸러야 OS가 다크일 때 덮이지 않는다.
  */
 @media (prefers-color-scheme: dark) {
-  :root:not(.light):not(.dark) {
+  :root:not(.light):not(.dark):not(.theme-sepia) {
     color-scheme: dark;
 
     --background: oklch(0.228 0.005 65);
     --foreground: oklch(0.925 0.004 75);
     --card: oklch(0.272 0.006 65);
     --card-foreground: oklch(0.925 0.004 75);
+    --elevated: oklch(0.385 0.008 65);
     --popover: oklch(0.272 0.006 65);
     --popover-foreground: oklch(0.925 0.004 75);
     --primary: oklch(0.9 0.006 75);
@@ -240,21 +301,52 @@
     /* 한글은 단어 중간에서도 줄이 바뀌어 목록이 들쭉날쭉해진다. */
     word-break: keep-all;
     overflow-wrap: anywhere;
+
+    /*
+     * 앱처럼 만지게 하는 것들 (W12.5).
+     *
+     * 탭 하이라이트는 모바일 브라우저가 누른 자리에 씌우는 회색 사각형이다.
+     * 컨트롤마다 모서리를 둥글렸는데 그 위에 각진 회색이 깜빡이면 웹페이지를
+     * 누른 티가 난다. 눌림 반응은 각 컨트롤의 active:scale이 맡는다.
+     *
+     * touch-action: manipulation 은 더블탭 확대를 끄고, 그 부작용으로 iOS의
+     * 300ms 클릭 지연도 사라진다 — 버튼이 즉시 반응해야 앱으로 느껴진다.
+     */
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
   }
 
   body {
     @apply bg-background text-foreground;
     -webkit-font-smoothing: antialiased;
+    /* 스크롤이 끝에 닿아도 뒤 페이지가 딸려오지 않게 한다. */
+    overscroll-behavior-y: none;
+  }
+
+  /*
+   * iOS Safari는 16px보다 작은 입력칸에 포커스가 가면 화면을 확대한다.
+   * 본문 눈금(--text-sm)이 15px이라 그대로 두면 글자를 칠 때마다 화면이
+   * 튄다. 좁은 화면에서만 16px로 올린다 — 데스크톱은 눈금을 지킨다.
+   */
+  @media (max-width: 640px) {
+    input,
+    select,
+    textarea {
+      font-size: 16px;
+    }
   }
 
   /*
    * 키보드로 옮겨 다닐 때 지금 어디에 있는지 보여야 한다.
    * :focus가 아니라 :focus-visible을 쓴다 — 마우스로 누른 버튼에까지 테두리가
    * 남으면 지저분하다.
+   *
+   * ring이 아니라 outline을 쓴다. outline은 요소의 border-radius를 그대로
+   * 따라가므로, 알약 모양 버튼에 각진 테두리가 씌워지지 않는다.
    */
   :focus-visible {
-    @apply ring-ring/60 rounded-sm ring-2 ring-offset-1 outline-none;
-    --tw-ring-offset-color: var(--background);
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
   }
 
   /* 제목은 세리프. "읽는 것"과 "조작하는 것"을 글꼴로 구분한다. */

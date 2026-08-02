@@ -5,6 +5,7 @@ import { useActionState } from "react";
 import { ACTION_IDLE } from "@/app/books/action-state";
 import { deleteGoalAction, setGoalAction } from "@/app/settings/actions";
 import { ConfirmSubmit } from "@/components/confirm-submit";
+import { Select } from "@/components/ui/select";
 import { buttonSecondary, errorText, input } from "@/components/ui/styles";
 import {
   formatMinutes,
@@ -89,25 +90,15 @@ export function GoalCard({ goals }: { goals: GoalCardData[] }) {
       )}
 
       <form action={formAction} className="mt-4 flex flex-wrap items-center gap-2">
-        <select
-          name="period"
-          aria-label="목표 기간"
-          defaultValue="year"
-          className={`${input} py-1`}
-        >
+        <Select name="period" aria-label="목표 기간" defaultValue="year">
           <option value="year">연간</option>
           <option value="month">월간</option>
-        </select>
+        </Select>
 
-        <select
-          name="metric"
-          aria-label="목표 지표"
-          defaultValue="books"
-          className={`${input} py-1`}
-        >
+        <Select name="metric" aria-label="목표 지표" defaultValue="books">
           <option value="books">권수</option>
           <option value="minutes">시간(분)</option>
-        </select>
+        </Select>
 
         <input
           name="target"

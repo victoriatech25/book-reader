@@ -3,6 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { ThemeToggle } from "@/components/theme-toggle";
+import { HomeIcon } from "@/components/ui/icons";
 import { quietLink } from "@/components/ui/styles";
 import { createServerSupabaseClient, getCurrentUser } from "@/lib/supabase/server";
 
@@ -42,7 +43,7 @@ export default async function SettingsPage() {
     <div className="bg-background flex flex-1 justify-center px-6 py-12">
       <main id="main" className="w-full max-w-xl">
         <Link href="/" className={quietLink}>
-          ← 홈
+          <HomeIcon />홈
         </Link>
         <h1 className="text-foreground mt-4 text-2xl font-semibold tracking-tight">설정</h1>
         <p className="text-muted-foreground mt-2 mb-10 text-sm">

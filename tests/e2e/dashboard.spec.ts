@@ -37,6 +37,8 @@ test.describe.serial("대시보드", () => {
 
   test("책이 없으면 0으로 시작한다", async () => {
     await page.goto("/");
+    // 제목 옆 앱 마크. 장식이라 aria-hidden이므로 역할이 아니라 요소로 본다.
+    await expect(page.locator("h1 svg")).toBeVisible();
     await expect(page.getByRole("group", { name: "완독 0권" })).toBeVisible();
     await expect(page.getByText("완독한 책이 아직 없습니다.")).toBeVisible();
     await expect(page.getByText("아직 목표가 없습니다. 아래에서 세워보세요.")).toBeVisible();
