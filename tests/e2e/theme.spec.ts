@@ -100,6 +100,41 @@ test.describe.serial("테마", () => {
     await expect(page.getByRole("radio", { name: "라이트" })).toBeChecked();
   });
 
+  /*
+   * 세피아는 color-scheme이 light라 applied()로는 라이트와 구분되지 않는다.
+   * 실제로 칠해진 배경색을 본다.
+   */
+  test("세피아는 OS가 다크여도 미색을 지킨다", async () => {
+    await page.goto("/");
+    await pick("세피아");
+
+    expect(await stored()).toBe("sepia");
+    await expect(page.getByRole("radio", { name: "세피아" }).first()).toBeChecked();
+
+    const background = () => page.evaluate(() => getComputedStyle(document.body).backgroundColor);
+    const sepia = await background();
+    expect(sepia).not.toBe("rgb(250, 249, 247)"); // 라이트
+    expect(sepia).not.toBe("rgb(28, 26, 24)"); // 다크
+
+    await page.emulateMedia({ colorScheme: "dark" });
+    expect(await background()).toBe(sepia);
+    await page.emulateMedia({ colorScheme: "light" });
+
+    // 첫 페인트 스크립트도 세피아를 알아야 새로고침에서 안 깜빡인다.
+    await page.reload();
+    expect(await background()).toBe(sepia);
+    expect(await page.evaluate(() => document.documentElement.className)).toContain("theme-sepia");
+  });
+
+  // Tailwind의 .sepia는 filter: sepia() 유틸리티다. 이름이 겹치면 화면 전체에
+  // 필터가 걸린다. 클래스 이름을 theme-sepia로 피한 이유가 이것이다.
+  test("세피아 테마가 화면에 필터를 걸지 않는다", async () => {
+    await page.goto("/");
+    expect(await page.evaluate(() => getComputedStyle(document.documentElement).filter)).toBe(
+      "none",
+    );
+  });
+
   test("본문 바로가기 링크가 키보드로 잡힌다", async () => {
     await page.goto("/");
     await page.keyboard.press("Tab");

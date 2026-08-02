@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { IBM_Plex_Mono } from "next/font/google";
 import { ServiceWorkerRegistrar } from "@/components/service-worker";
+import { THEME_CLASS } from "@/lib/theme";
 
 import "./globals.css";
 
@@ -32,8 +33,11 @@ const numeric = IBM_Plex_Mono({
  *
  * 인라인으로 두는 이유는 첫 페인트 전에 실행되어야 하기 때문이다. 나중에
  * 붙이면 라이트로 그려진 뒤 다크로 뒤집혀 깜빡인다.
+ *
+ * 저장값 → 클래스 대응표는 lib/theme.ts에서 그대로 실어온다. 여기에 이름을
+ * 다시 적으면 테마를 추가할 때 한쪽만 고치게 된다.
  */
-const themeScript = `(function(){try{var t=localStorage.getItem("theme");if(t==="light"||t==="dark"){document.documentElement.classList.add(t)}}catch(e){}})()`;
+const themeScript = `(function(){try{var m=${JSON.stringify(THEME_CLASS)};var c=m[localStorage.getItem("theme")];if(typeof c==="string"){document.documentElement.classList.add(c)}}catch(e){}})()`;
 
 export const metadata: Metadata = {
   title: "독서대",
@@ -70,7 +74,7 @@ export default function RootLayout({
         */}
         <a
           href="#main"
-          className="bg-card text-foreground border-border focus:ring-ring/50 sr-only rounded-md border px-4 py-2 text-sm focus:not-sr-only focus:absolute focus:top-3 focus:left-3 focus:z-50 focus:ring-2"
+          className="bg-card text-foreground border-border focus:ring-ring/50 sr-only rounded-xl border px-4 py-2 text-sm focus:not-sr-only focus:absolute focus:top-3 focus:left-3 focus:z-50 focus:ring-2"
         >
           본문 바로가기
         </a>

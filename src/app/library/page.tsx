@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
+import { HomeIcon, SettingsIcon } from "@/components/ui/icons";
 import { quietLink } from "@/components/ui/styles";
 import type { LibraryBook } from "@/lib/library/filter";
 import type { ProgressUnit, ReadingStatus } from "@/lib/reading-status";
@@ -75,9 +76,10 @@ export default async function LibraryPage() {
       <main id="main" className="w-full max-w-5xl">
         <div className="flex items-baseline justify-between gap-4">
           <Link href="/" className={quietLink}>
-            ← 홈
+            <HomeIcon />홈
           </Link>
           <Link href="/settings" className={quietLink}>
+            <SettingsIcon />
             설정
           </Link>
         </div>

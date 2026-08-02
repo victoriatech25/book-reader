@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 
 import { ACTION_IDLE } from "@/app/books/action-state";
+import { Select } from "@/components/ui/select";
 import { buttonSecondary, errorText, input, quietLink } from "@/components/ui/styles";
 import { DUPLICATE_POLICIES, DUPLICATE_POLICY_LABEL } from "@/lib/backup/import-plan";
 
@@ -34,7 +35,7 @@ export function BackupManager() {
         </a>
       </div>
 
-      <form action={formAction} className="border-border mt-6 rounded-md border p-4">
+      <form action={formAction} className="border-border mt-6 rounded-xl border p-4">
         <h3 className="text-foreground text-sm font-medium">백업 가져오기</h3>
         <p className="text-muted-foreground mt-1 text-xs">
           지우고 덮어쓰지 않습니다. 지금 서재에 <strong>얹습니다.</strong>
@@ -59,18 +60,13 @@ export function BackupManager() {
             <label htmlFor="backup-policy" className="text-muted-foreground block text-xs">
               이미 있는 책은
             </label>
-            <select
-              id="backup-policy"
-              name="policy"
-              defaultValue="skip"
-              className={`mt-1 w-full ${input} py-1.5`}
-            >
+            <Select id="backup-policy" name="policy" defaultValue="skip" className="mt-1 w-full">
               {DUPLICATE_POLICIES.map((policy) => (
                 <option key={policy} value={policy}>
                   {DUPLICATE_POLICY_LABEL[policy]}
                 </option>
               ))}
-            </select>
+            </Select>
           </div>
 
           <button type="submit" disabled={pending} className={buttonSecondary}>

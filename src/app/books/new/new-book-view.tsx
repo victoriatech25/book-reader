@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 
+import { BackIcon } from "@/components/ui/icons";
 import { buttonPrimary, errorText, input, quietLink } from "@/components/ui/styles";
 import type { BookSearchItem } from "@/lib/book-search/kakao";
 
@@ -72,6 +73,7 @@ export function NewBookView({
         <div className="flex items-baseline justify-between gap-4">
           <h2 className="text-foreground text-sm font-medium">내용을 확인하고 저장하세요</h2>
           <button type="button" onClick={() => setDefaults(null)} className={quietLink}>
+            <BackIcon />
             검색으로 돌아가기
           </button>
         </div>

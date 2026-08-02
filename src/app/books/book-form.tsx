@@ -5,12 +5,14 @@ import { useActionState, useState } from "react";
 
 import {
   buttonPrimary,
+  checkbox,
   errorText,
   hint as hintClass,
   input,
   label as labelClass,
   quietLink,
 } from "@/components/ui/styles";
+import { Select } from "@/components/ui/select";
 import { BOOK_FORMATS, BOOK_OWNERSHIPS, FORMAT_LABEL, OWNERSHIP_LABEL } from "@/lib/books/schema";
 
 import { ReviewFields } from "./[id]/review-fields";
@@ -56,6 +58,8 @@ export const EMPTY_BOOK: BookDefaults = {
 };
 
 const inputClass = `mt-1.5 w-full ${input}`;
+/** Select는 껍데기가 스타일을 들고 있다. 여기서는 자리(여백·폭)만 준다. */
+const selectClass = "mt-1.5 w-full";
 
 function Field({
   name,
@@ -152,44 +156,44 @@ export function BookForm({
 
       <div className="grid gap-5 sm:grid-cols-2">
         <Field name="format" label="형태">
-          <select
+          <Select
             id="format"
             name="format"
             value={format}
             onChange={(event) => setFormat(event.target.value)}
-            className={inputClass}
+            className={selectClass}
           >
             {BOOK_FORMATS.map((value) => (
               <option key={value} value={value}>
                 {FORMAT_LABEL[value]}
               </option>
             ))}
-          </select>
+          </Select>
         </Field>
 
         <Field name="ownership" label="소장 형태">
-          <select
+          <Select
             id="ownership"
             name="ownership"
             defaultValue={defaults.ownership}
-            className={inputClass}
+            className={selectClass}
           >
             {BOOK_OWNERSHIPS.map((value) => (
               <option key={value} value={value}>
                 {OWNERSHIP_LABEL[value]}
               </option>
             ))}
-          </select>
+          </Select>
         </Field>
       </div>
 
       <div className="grid gap-5 sm:grid-cols-2">
         <Field name="category_id" label="분야" hint="통계의 분류 축입니다. 책당 하나만 고릅니다.">
-          <select
+          <Select
             id="category_id"
             name="category_id"
             defaultValue={defaults.category_id}
-            className={inputClass}
+            className={selectClass}
           >
             <option value="">선택 안 함</option>
             {categories.map((category) => (
@@ -197,7 +201,7 @@ export function BookForm({
                 {category.name}
               </option>
             ))}
-          </select>
+          </Select>
         </Field>
 
         <Field name="tags" label="태그" hint="쉼표로 구분합니다. 여러 개 붙일 수 있습니다.">
@@ -218,13 +222,14 @@ export function BookForm({
       </div>
 
       {showAlreadyRead && (
-        <div className="border-border rounded-md border p-4">
+        <div className="border-border rounded-xl border p-4">
           <label className="flex items-center gap-2 text-sm font-medium">
             <input
               type="checkbox"
               name="already_read"
               checked={alreadyRead}
               onChange={(event) => setAlreadyRead(event.target.checked)}
+              className={checkbox}
             />
             이미 다 읽은 책이에요
           </label>
@@ -279,7 +284,7 @@ export function BookForm({
         />
       </Field>
 
-      <details className="border-border rounded-md border px-3 py-2">
+      <details className="border-border rounded-xl border px-3 py-2">
         <summary className="text-muted-foreground cursor-pointer text-sm">
           자세히 (부제 · 역자 · ISBN · 표지 · 메모)
         </summary>

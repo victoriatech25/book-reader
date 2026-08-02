@@ -1,3 +1,4 @@
+import { BackIcon } from "@/components/ui/icons";
 import { quietLink } from "@/components/ui/styles";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -32,7 +33,8 @@ export default async function EditBookPage({ params }: { params: Promise<{ id: s
     <div className="bg-background flex flex-1 justify-center px-6 py-12">
       <main id="main" className="w-full max-w-xl">
         <Link href={`/books/${book.id}`} className={quietLink}>
-          ← 상세로
+          <BackIcon />
+          상세로
         </Link>
         <h1 className="text-foreground mt-4 mb-8 text-2xl font-semibold tracking-tight">책 수정</h1>
 

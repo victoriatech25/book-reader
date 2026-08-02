@@ -8,9 +8,12 @@ import {
   STORAGE_KEY,
   storageValueFor,
   THEME_CHOICES,
+  THEME_CLASSES,
   THEME_LABEL,
+  themeClassFor,
   type ThemeChoice,
 } from "@/lib/theme";
+import { segmentItem, segmentItemActive, segmentTrack } from "./ui/styles";
 
 /*
  * localStorage를 React 바깥 저장소로 다룬다.
@@ -53,8 +56,10 @@ function getServerSnapshot(): string {
  */
 function applyTheme(choice: ThemeChoice) {
   const root = document.documentElement;
-  root.classList.remove("light", "dark");
-  if (choice !== "system") root.classList.add(choice);
+  root.classList.remove(...THEME_CLASSES);
+
+  const next = themeClassFor(choice);
+  if (next) root.classList.add(next);
 }
 
 /**
@@ -77,7 +82,7 @@ export function ThemeToggle({ idPrefix = "theme" }: { idPrefix?: string }) {
   }
 
   return (
-    <fieldset className="border-border inline-flex items-center gap-0.5 rounded-md border p-0.5">
+    <fieldset className={segmentTrack}>
       <legend className="sr-only">테마</legend>
 
       {THEME_CHOICES.map((value) => {
@@ -95,13 +100,13 @@ export function ThemeToggle({ idPrefix = "theme" }: { idPrefix?: string }) {
               }}
               className="peer sr-only"
             />
+            {/*
+              라디오는 sr-only라 포커스 링이 안 보인다. 라벨이 대신 받는다
+              (peer-focus-visible). 링은 outline이라 알약 모서리를 따라간다.
+            */}
             <label
               htmlFor={`${idPrefix}-${value}`}
-              className={
-                active
-                  ? "bg-accent text-foreground peer-focus-visible:ring-ring/60 block cursor-pointer rounded px-2.5 py-1 text-xs peer-focus-visible:ring-2"
-                  : "text-muted-foreground hover:text-foreground peer-focus-visible:ring-ring/60 block cursor-pointer rounded px-2.5 py-1 text-xs transition-colors peer-focus-visible:ring-2"
-              }
+              className={`${active ? segmentItemActive : segmentItem} peer-focus-visible:outline-ring text-xs peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2`}
             >
               {THEME_LABEL[value]}
             </label>

@@ -4,6 +4,7 @@ import { useActionState, useState } from "react";
 
 import { ACTION_IDLE, type ActionState } from "@/app/books/action-state";
 import { createNoteAction } from "@/app/books/actions";
+import { Select } from "@/components/ui/select";
 import { buttonSecondary, errorText, input } from "@/components/ui/styles";
 import type { ProgressUnit } from "@/lib/reading-status";
 import { NOTE_KIND_LABEL, NOTE_KINDS, NOTE_MAX_LENGTH } from "@/lib/reviews";
@@ -38,13 +39,13 @@ function NoteFields({ readingId, unit, target, state, formAction, pending }: Fie
       />
 
       <div className="flex flex-wrap items-center gap-2">
-        <select name="kind" aria-label="종류" defaultValue="quote" className={inputClass}>
+        <Select name="kind" aria-label="종류" defaultValue="quote">
           {NOTE_KINDS.map((kind) => (
             <option key={kind} value={kind}>
               {NOTE_KIND_LABEL[kind]}
             </option>
           ))}
-        </select>
+        </Select>
 
         <input
           name="location"

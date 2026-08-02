@@ -3,7 +3,14 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 
-import { input, quietLink } from "@/components/ui/styles";
+import { Select } from "@/components/ui/select";
+import {
+  input,
+  quietLink,
+  segmentItem,
+  segmentItemActive,
+  segmentTrack,
+} from "@/components/ui/styles";
 import { formatDate } from "@/lib/format";
 import {
   countByStatus,
@@ -184,8 +191,6 @@ export function LibraryView({
   const years = useMemo(() => finishedYears(books), [books]);
   const tags = useMemo(() => usedTags(books), [books]);
 
-  const selectClass = `${input} py-1.5 text-sm`;
-
   return (
     <div>
       <input
@@ -197,7 +202,8 @@ export function LibraryView({
         className={`w-full ${input}`}
       />
 
-      <div className="border-border mt-5 flex flex-wrap gap-1 border-b">
+      {/* 밑줄 탭 대신 알약. 좁은 화면에서는 줄바꿈 없이 옆으로 밀린다. */}
+      <div className={`mt-5 ${segmentTrack}`}>
         {STATUS_TABS.map((tab) => {
           const active = filter.status === tab;
           return (
@@ -209,14 +215,10 @@ export function LibraryView({
               // 스크린리더가 "전체삼"으로 읽는다.
               aria-label={`${STATUS_TAB_LABEL[tab]} ${counts[tab]}권`}
               onClick={() => patch({ status: tab })}
-              className={
-                active
-                  ? "border-foreground text-foreground -mb-px border-b-2 px-3 py-2 text-sm font-medium"
-                  : "text-muted-foreground hover:text-foreground -mb-px border-b-2 border-transparent px-3 py-2 text-sm transition-colors"
-              }
+              className={active ? segmentItemActive : segmentItem}
             >
               {STATUS_TAB_LABEL[tab]}
-              <span className="ml-1.5 font-mono text-xs">{counts[tab]}</span>
+              <span className="font-mono text-xs opacity-70">{counts[tab]}</span>
             </button>
           );
         })}
@@ -225,11 +227,10 @@ export function LibraryView({
       <div className="mt-5 lg:grid lg:grid-cols-[190px_1fr] lg:gap-8">
         {/* 데스크톱은 사이드바, 모바일은 위에 깔린다 (PRD §4) */}
         <aside className="flex flex-wrap gap-2 lg:flex-col lg:items-stretch">
-          <select
+          <Select
             aria-label="분야"
             value={filter.categoryId ?? ""}
             onChange={(event) => patch({ categoryId: event.target.value || null })}
-            className={selectClass}
           >
             <option value="">분야 전체</option>
             {categories.map((category) => (
@@ -237,13 +238,12 @@ export function LibraryView({
                 {category.name}
               </option>
             ))}
-          </select>
+          </Select>
 
-          <select
+          <Select
             aria-label="태그"
             value={filter.tag ?? ""}
             onChange={(event) => patch({ tag: event.target.value || null })}
-            className={selectClass}
           >
             <option value="">태그 전체</option>
             {tags.map((tag) => (
@@ -251,15 +251,14 @@ export function LibraryView({
                 #{tag}
               </option>
             ))}
-          </select>
+          </Select>
 
-          <select
+          <Select
             aria-label="별점"
             value={filter.minRating ?? ""}
             onChange={(event) =>
               patch({ minRating: event.target.value ? Number(event.target.value) : null })
             }
-            className={selectClass}
           >
             <option value="">별점 전체</option>
             {[...RATING_OPTIONS].reverse().map((value) => (
@@ -267,13 +266,12 @@ export function LibraryView({
                 ★ {value.toFixed(1)} 이상
               </option>
             ))}
-          </select>
+          </Select>
 
-          <select
+          <Select
             aria-label="완독 연도"
             value={filter.year ?? ""}
             onChange={(event) => patch({ year: event.target.value || null })}
-            className={selectClass}
           >
             <option value="">연도 전체</option>
             {years.map((year) => (
@@ -281,22 +279,21 @@ export function LibraryView({
                 {year}년 완독
               </option>
             ))}
-          </select>
+          </Select>
 
-          <select
+          <Select
             aria-label="정렬"
             value={sort}
             onChange={(event) => {
               if (isSortKey(event.target.value)) setSort(event.target.value);
             }}
-            className={selectClass}
           >
             {SORT_OPTIONS.map((key) => (
               <option key={key} value={key}>
                 {SORT_LABEL[key]}
               </option>
             ))}
-          </select>
+          </Select>
 
           {hasActiveFilter(filter) && (
             <button
@@ -318,18 +315,14 @@ export function LibraryView({
               )}
             </p>
 
-            <div className="flex items-center gap-1">
+            <div className={segmentTrack}>
               {(["list", "grid"] as const).map((mode) => (
                 <button
                   key={mode}
                   type="button"
                   aria-pressed={view === mode}
                   onClick={() => setView(mode)}
-                  className={
-                    view === mode
-                      ? "border-border bg-accent text-foreground rounded-md border px-2.5 py-1 text-xs"
-                      : "text-muted-foreground hover:text-foreground rounded-md border border-transparent px-2.5 py-1 text-xs transition-colors"
-                  }
+                  className={`${view === mode ? segmentItemActive : segmentItem} text-xs`}
                 >
                   {mode === "list" ? "리스트" : "그리드"}
                 </button>

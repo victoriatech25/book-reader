@@ -50,7 +50,7 @@ function CategoryRow({ category }: { category: Category }) {
           type="color"
           defaultValue={swatch}
           aria-label={`${category.name} 색`}
-          className="border-input bg-card h-8 w-12 cursor-pointer rounded-md border p-1"
+          className="border-border bg-card h-11 w-14 cursor-pointer rounded-xl border p-1"
         />
 
         <button
