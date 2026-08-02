@@ -23,6 +23,41 @@ test.describe("보호 라우트 (미로그인)", () => {
     expect(url.searchParams.get("next")).toBe("/library?status=reading");
   });
 
+  /*
+   * Google 로그인은 실제로 구글까지 갈 수 없다(사람이 동의 화면을 눌러야 한다).
+   * 대신 브라우저를 떠나기 직전까지를 본다 — Supabase의 authorize 주소로
+   * 나가는지, provider와 콜백 주소가 맞는지. 요청은 가로채서 실제로 보내지
+   * 않는다.
+   *
+   * 이 단정이 지키는 것: redirect_to 가 배포 도메인의 /auth/confirm 이어야
+   * 한다. 여기가 어긋나면 Supabase가 조용히 Site URL로 갈아끼워서, 로그인은
+   * 되는데 엉뚱한 도메인에 세션이 생긴다.
+   */
+  test("Google 로그인은 supabase authorize로 나간다", async ({ page }) => {
+    await page.goto("/login?next=%2Flibrary");
+    // 나가는 요청을 끊으면 page.url()이 about:blank가 된다. 지금 잡아둔다.
+    const origin = new URL(page.url()).origin;
+
+    let authorizeUrl: string | null = null;
+    await page.route("**/auth/v1/authorize*", async (route) => {
+      authorizeUrl = route.request().url();
+      await route.abort();
+    });
+
+    await page.getByRole("button", { name: "Google 계정으로 계속하기" }).click();
+    await expect.poll(() => authorizeUrl).not.toBeNull();
+
+    const url = new URL(authorizeUrl!);
+    expect(url.searchParams.get("provider")).toBe("google");
+    // PKCE라야 /auth/confirm 의 exchangeCodeForSession 이 성립한다.
+    expect(url.searchParams.get("code_challenge_method")).toBe("s256");
+
+    const redirect = new URL(url.searchParams.get("redirect_to") ?? "");
+    expect(redirect.origin).toBe(origin);
+    expect(redirect.pathname).toBe("/auth/confirm");
+    expect(redirect.searchParams.get("next")).toBe("/library");
+  });
+
   test("API는 리다이렉트가 아니라 401 JSON을 준다", async ({ request }) => {
     const response = await request.get("/api/book-search?q=사피엔스");
 

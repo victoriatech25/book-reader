@@ -24,7 +24,7 @@ export default async function LoginPage({
       <main id="main" className="w-full max-w-sm">
         <h1 className="text-foreground text-2xl font-semibold tracking-tight">독서대</h1>
         <p className="text-muted-foreground mt-2 mb-8 text-sm">
-          이메일로 로그인 링크를 보내드립니다. 비밀번호는 없습니다.
+          Google 계정으로 바로 들어오거나, 메일로 로그인 링크를 받습니다. 비밀번호는 없습니다.
         </p>
 
         {error && (
