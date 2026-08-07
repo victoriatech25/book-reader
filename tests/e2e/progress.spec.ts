@@ -143,7 +143,10 @@ test.describe.serial("진행률 기록", () => {
     await card.getByLabel("진행률 (%)").fill("70");
     await card.getByRole("button", { name: "기록" }).click();
 
-    await expect(card.getByText("70%").first()).toBeVisible();
+    // 왼쪽은 지금 어디인지, 오른쪽은 얼마나 남았는지.
+    // exact가 곧 단정이다 — 예전에는 양쪽 다 "70%"라 이 로케이터가 둘을 물었다.
+    await expect(card.getByText("70%", { exact: true })).toBeVisible();
+    await expect(card.getByText("30% 남음")).toBeVisible();
     await expect(page).toHaveURL("/");
   });
 });

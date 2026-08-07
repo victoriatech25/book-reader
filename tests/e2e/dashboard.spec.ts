@@ -41,6 +41,8 @@ test.describe.serial("대시보드", () => {
     await expect(page.locator("h1 svg")).toBeVisible();
     await expect(page.getByRole("group", { name: "완독 0권" })).toBeVisible();
     await expect(page.getByText("완독한 책이 아직 없습니다.")).toBeVisible();
+    // 표지 줄은 채울 것이 없으면 제목째로 나오지 않는다.
+    await expect(page.getByRole("heading", { name: "올해 읽은 책" })).toBeHidden();
     await expect(page.getByText("아직 목표가 없습니다. 아래에서 세워보세요.")).toBeVisible();
   });
 
@@ -64,6 +66,10 @@ test.describe.serial("대시보드", () => {
 
     // 도넛은 접근성 이름에 분포를 그대로 담는다.
     await expect(page.getByRole("img", { name: /분야 분포. 전체 1권. 과학 1권/ })).toBeVisible();
+
+    // 완독한 책은 표지 줄에 선다. 표지가 없어도 자리는 지킨다.
+    const coverRow = page.locator("section", { hasText: "올해 읽은 책" }).first();
+    await expect(coverRow.getByRole("link", { name: "통계 검증용 책" })).toBeVisible();
   });
 
   test("진행을 기록하면 연속 기록이 1일이 된다", async () => {

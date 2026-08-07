@@ -5,6 +5,7 @@ import {
   checkProgress,
   formatDelta,
   formatProgress,
+  formatRemaining,
   planUnitChange,
   progressDelta,
   progressPercent,
@@ -43,6 +44,35 @@ describe("formatProgress", () => {
 
   it("전체 쪽수를 모르면 물음표로 둔다", () => {
     expect(formatProgress(120, "page", null)).toBe("120 / ?쪽");
+  });
+});
+
+describe("formatRemaining", () => {
+  it("종이책은 남은 쪽수로 적는다", () => {
+    expect(formatRemaining(120, "page", 480)).toBe("360쪽 남음");
+  });
+
+  it("전자책은 남은 퍼센트로 적는다", () => {
+    expect(formatRemaining(30, "percent", 100)).toBe("70% 남음");
+  });
+
+  it("진행 표기와 같은 숫자가 두 번 나오지 않는다", () => {
+    // 대시보드에서 percent 단위 책이 "42% … 42%"로 보이던 것을 막는다.
+    expect(formatRemaining(42, "percent", 100)).not.toBe(formatProgress(42, "percent", 100));
+  });
+
+  it("분량을 모르면 null이다 — 화면에서 아무것도 그리지 않는다", () => {
+    expect(formatRemaining(120, "page", null)).toBeNull();
+    expect(formatRemaining(120, "page", 0)).toBeNull();
+  });
+
+  it("끝까지 읽었어도 완독이라고 쓰지 않는다 — 완독은 명시적 행위다", () => {
+    expect(formatRemaining(100, "percent", 100)).toBe("남은 분량 없음");
+    expect(formatRemaining(480, "page", 480)).toBe("남은 분량 없음");
+  });
+
+  it("분량을 넘겨도 음수가 나오지 않는다", () => {
+    expect(formatRemaining(500, "page", 480)).toBe("남은 분량 없음");
   });
 });
 
