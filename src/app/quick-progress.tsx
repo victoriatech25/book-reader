@@ -5,7 +5,7 @@ import { useActionState, useOptimistic } from "react";
 import { ACTION_IDLE } from "@/app/books/action-state";
 import { recordProgressAction } from "@/app/books/actions";
 import { buttonSecondary, errorText, input } from "@/components/ui/styles";
-import { formatProgress, progressPercent } from "@/lib/progress";
+import { formatProgress, formatRemaining, progressPercent } from "@/lib/progress";
 import type { ProgressUnit } from "@/lib/reading-status";
 
 /**
@@ -38,14 +38,20 @@ export function QuickProgress({
   );
 
   const percent = progressPercent(optimisticValue, target);
+  const remaining = formatRemaining(optimisticValue, unit, target);
 
   return (
     <div className="mt-2">
+      {/*
+        왼쪽은 지금 어디인지, 오른쪽은 얼마나 남았는지. 비율은 아래 막대가 이미
+        보여주므로 숫자로 되풀이하지 않는다 — percent 단위에서는 왼쪽 값이 곧
+        진행률이라 같은 숫자가 두 번 나왔다.
+      */}
       <div className="flex items-baseline justify-between gap-3">
         <span className="text-muted-foreground font-mono text-xs">
           {formatProgress(optimisticValue, unit, target)}
         </span>
-        <span className="text-muted-foreground font-mono text-xs">{percent}%</span>
+        {remaining && <span className="text-muted-foreground font-mono text-xs">{remaining}</span>}
       </div>
 
       <div className="bg-muted mt-1.5 h-1.5 w-full overflow-hidden rounded-full">

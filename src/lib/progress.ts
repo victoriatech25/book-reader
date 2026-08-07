@@ -18,6 +18,28 @@ export function formatProgress(value: number, unit: ProgressUnit, target: number
   return unit === "page" ? `${value} / ${target ?? "?"}쪽` : `${value}%`;
 }
 
+/**
+ * 남은 분량 표기. 모르면 null이고, 그 경우 화면에서는 아무것도 그리지 않는다.
+ *
+ * formatProgress 옆에 퍼센트를 같이 놓으면 percent 단위에서 같은 숫자가 두 번
+ * 나온다("42% … 42%"). 남은 양은 어느 단위에서도 진행 표기와 겹치지 않는다.
+ *
+ * 남은 분량이 0이어도 "완독"이라고 쓰지 않는다. 완독은 명시적 행위이고
+ * 진행률 100%는 완독이 아니다 (PRD §2.1).
+ */
+export function formatRemaining(
+  value: number,
+  unit: ProgressUnit,
+  target: number | null,
+): string | null {
+  if (!target || target <= 0) return null;
+
+  const left = Math.max(0, target - value);
+  if (left === 0) return "남은 분량 없음";
+
+  return unit === "page" ? `${left}쪽 남음` : `${left}% 남음`;
+}
+
 export const PROGRESS_UNIT_LABEL: Record<ProgressUnit, string> = {
   percent: "퍼센트",
   page: "페이지",

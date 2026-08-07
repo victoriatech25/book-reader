@@ -19,6 +19,7 @@ import {
   formatMinutes,
   goalProgress,
   monthlyFinished,
+  seoulDate,
   seoulToday,
   totalMinutes,
   yearPart,
@@ -32,6 +33,60 @@ import { createServerSupabaseClient, getCurrentUser } from "@/lib/supabase/serve
 import { CategoryDonut, MonthlyBars } from "./charts";
 import { GoalCard, type GoalCardData } from "./goal-card";
 import { QuickProgress } from "./quick-progress";
+
+/*
+ * 표지 줄의 최대 칸 수. 가장 넓은 화면(본문 폭 768px)의 열 칸과 같다.
+ * 실제로 몇 칸이 보이는지는 CSS가 정한다 — 아래 CoverRow 참고.
+ */
+const COVER_ROW_MAX = 10;
+
+/**
+ * 올해 읽은 책 표지 한 줄.
+ *
+ * 좁은 화면 5칸 · sm 8칸 · md 10칸. 열 수와 감추는 칸이 같은 눈금을 쓰기 때문에
+ * 어느 폭에서도 정확히 한 줄이고, 잘린 표지가 남지 않는다. display:none인 칸은
+ * 그리드에서 자리를 차지하지 않으므로 두 번째 줄로 밀려나는 일도 없다.
+ *
+ * 가로 스크롤을 두지 않는다. 대시보드는 훑어보는 화면이고, 전부 보려면 서재가 있다.
+ */
+function CoverRow({
+  books,
+}: {
+  books: { readingId: string; bookId: string; title: string; coverUrl: string | null }[];
+}) {
+  return (
+    <ul className="mt-3 grid grid-cols-5 gap-2 sm:grid-cols-8 md:grid-cols-10">
+      {books.map((book, index) => (
+        <li
+          key={book.readingId}
+          className={index >= 8 ? "hidden md:block" : index >= 5 ? "hidden sm:block" : undefined}
+        >
+          <Link
+            href={`/books/${book.bookId}`}
+            aria-label={book.title}
+            title={book.title}
+            className="block rounded-sm transition-transform active:scale-[0.97]"
+          >
+            {book.coverUrl ? (
+              // 표지는 외부 도메인이라 next/image 대신 img를 쓴다 (서재와 같은 이유).
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={book.coverUrl}
+                alt=""
+                loading="lazy"
+                decoding="async"
+                className="aspect-[2/3] w-full rounded-sm object-cover"
+              />
+            ) : (
+              // 표지가 없는 책도 자리는 지킨다. 빠지면 줄이 어긋나 순서를 잃는다.
+              <span className="bg-muted block aspect-[2/3] w-full rounded-sm" />
+            )}
+          </Link>
+        </li>
+      ))}
+    </ul>
+  );
+}
 
 function Stat({ label, value, hint }: { label: string; value: string; hint?: string }) {
   return (
@@ -69,9 +124,13 @@ export default async function Home() {
   ] = await Promise.all([
     supabase
       .from("readings")
-      .select("finished_at, rating, books(category_id, categories(name, color, sort_order))")
+      .select(
+        "id, finished_at, rating, books(id, title, cover_url, category_id, categories(name, color, sort_order))",
+      )
       .eq("status", "finished")
-      .not("finished_at", "is", null),
+      .not("finished_at", "is", null)
+      // 표지 줄이 최신 완독 순이다. 집계는 순서를 타지 않으므로 손해가 없다.
+      .order("finished_at", { ascending: false }),
     supabase.from("progress_logs").select("logged_on, minutes"),
     supabase
       .from("readings")
@@ -90,7 +149,9 @@ export default async function Home() {
       .limit(3),
   ]);
 
-  const finished: FinishedReading[] = (finishedRows ?? []).map((row) => ({
+  const finishedRowsSafe = finishedRows ?? [];
+
+  const finished: FinishedReading[] = finishedRowsSafe.map((row) => ({
     finishedAt: row.finished_at,
     categoryId: row.books?.category_id ?? null,
     categoryName: row.books?.categories?.name ?? null,
@@ -135,6 +196,26 @@ export default async function Home() {
   const average = averageRating(finished, thisYear);
   const shares = categoryDistribution(finished, thisYear);
   const months = monthlyFinished(finished, thisYear);
+
+  /*
+   * 올해 완독한 책의 표지 줄. 쿼리가 최신 완독 순으로 주므로 그대로 왼쪽부터 쓴다.
+   *
+   * 한 줄을 넘기지 않는다 — 넘치는 칸은 CSS가 감춘다(아래 섹션). 화면이 가장
+   * 넓어도 열 칸이므로 그 이상은 애초에 만들지 않는다. 서버는 화면 폭을 모르니
+   * 개수를 여기서 정하는 대신 상한만 두고 판단은 CSS에 맡긴다.
+   */
+  const coverRow = finishedRowsSafe
+    .filter((row) => {
+      const day = seoulDate(row.finished_at);
+      return day !== null && yearPart(day) === thisYear && row.books !== null;
+    })
+    .slice(0, COVER_ROW_MAX)
+    .map((row) => ({
+      readingId: row.id,
+      bookId: row.books!.id,
+      title: row.books!.title,
+      coverUrl: row.books!.cover_url,
+    }));
 
   return (
     <div className="bg-background flex flex-1 justify-center px-6 py-12">
@@ -221,6 +302,19 @@ export default async function Home() {
         <div className="mt-10">
           <GoalCard goals={goals} />
         </div>
+
+        {/* -- 올해 읽은 책 ----------------------------------------------- */}
+        {coverRow.length > 0 && (
+          <section className="mt-10">
+            <div className="flex items-baseline justify-between gap-3">
+              <h2 className="text-foreground text-sm font-medium">올해 읽은 책</h2>
+              <p className="text-muted-foreground text-xs">
+                <span className="text-foreground font-mono">{finishedThisYear}</span>권
+              </p>
+            </div>
+            <CoverRow books={coverRow} />
+          </section>
+        )}
 
         {/* -- 차트 ------------------------------------------------------- */}
         <section className="mt-10">
