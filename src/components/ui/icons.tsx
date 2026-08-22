@@ -83,3 +83,32 @@ export function LibraryIcon(props: IconProps) {
     </Svg>
   );
 }
+
+/** 플러스 (+). 도서 등록/추가 액션 */
+export function PlusIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path d="M12 5v14M5 12h14" />
+    </Svg>
+  );
+}
+
+/** 돋보기. 검색 입력창 */
+export function SearchIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <circle cx="11" cy="11" r="7" />
+      <path d="m20 20-4.35-4.35" />
+    </Svg>
+  );
+}
+
+/** 닫기 / 지우기 (X) */
+export function CrossIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path d="M18 6 6 18M6 6l12 12" />
+    </Svg>
+  );
+}
+

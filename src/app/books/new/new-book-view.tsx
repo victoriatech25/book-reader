@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 
-import { BackIcon } from "@/components/ui/icons";
+import { BookCover } from "@/components/book-cover";
+import { BackIcon, CrossIcon, SearchIcon } from "@/components/ui/icons";
 import { buttonPrimary, errorText, input, quietLink } from "@/components/ui/styles";
 import type { BookSearchItem } from "@/lib/book-search/kakao";
 
@@ -93,13 +94,29 @@ export function NewBookView({
   return (
     <div className="space-y-6">
       <form onSubmit={handleSearch} className="flex gap-2">
-        <input
-          aria-label="책 검색"
-          placeholder="제목이나 저자로 검색"
-          value={query}
-          onChange={(event) => setQuery(event.target.value)}
-          className={`w-full ${input}`}
-        />
+        <div className="relative flex flex-1 items-center">
+          <span className="text-muted-foreground/70 pointer-events-none absolute left-3.5 flex items-center">
+            <SearchIcon className="size-4" />
+          </span>
+          <input
+            autoFocus
+            aria-label="책 검색"
+            placeholder="제목이나 저자로 검색"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            className={`w-full pr-9 pl-10 ${input}`}
+          />
+          {query && (
+            <button
+              type="button"
+              aria-label="검색어 지우기"
+              onClick={() => setQuery("")}
+              className="text-muted-foreground hover:text-foreground absolute right-3 flex size-5 items-center justify-center rounded-full p-0.5 transition-colors"
+            >
+              <CrossIcon className="size-3.5" />
+            </button>
+          )}
+        </div>
         <button
           type="submit"
           disabled={search.kind === "searching"}
@@ -132,19 +149,11 @@ export function NewBookView({
                 aria-label={`${item.title} 선택`}
                 className="hover:bg-accent flex w-full items-start gap-3 rounded-md px-2 py-3 text-left transition-colors"
               >
-                {item.coverUrl ? (
-                  // 표지는 외부 도메인이라 next/image 대신 img를 쓴다.
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={item.coverUrl}
-                    alt=""
-                    loading="lazy"
-                    decoding="async"
-                    className="h-16 w-11 shrink-0 rounded-sm object-cover"
-                  />
-                ) : (
-                  <span className="bg-muted h-16 w-11 shrink-0 rounded-sm" />
-                )}
+                <BookCover
+                  title={item.title}
+                  coverUrl={item.coverUrl}
+                  className="h-16 w-11 shrink-0 rounded-sm"
+                />
                 <span className="min-w-0">
                   <span className="text-foreground block truncate font-serif text-base font-medium">
                     {item.title}
@@ -169,3 +178,4 @@ export function NewBookView({
     </div>
   );
 }
+

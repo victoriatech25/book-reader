@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useOptimistic } from "react";
+import { useActionState, useOptimistic, useState } from "react";
 
 import { ACTION_IDLE } from "@/app/books/action-state";
 import { recordProgressAction } from "@/app/books/actions";
@@ -27,18 +27,35 @@ export function QuickProgress({
   target: number | null;
 }) {
   const [optimisticValue, setOptimisticValue] = useOptimistic(current);
+  const [valInput, setValInput] = useState<string>("");
+  const [minInput, setMinInput] = useState<string>("");
 
   const [state, formAction, pending] = useActionState(
     async (prev: typeof ACTION_IDLE, formData: FormData) => {
       const next = Number(String(formData.get("value") ?? "").trim());
       if (Number.isInteger(next)) setOptimisticValue(next);
-      return recordProgressAction(prev, formData);
+      const res = await recordProgressAction(prev, formData);
+      if (!res.error) {
+        setValInput("");
+        setMinInput("");
+      }
+      return res;
     },
     ACTION_IDLE,
   );
 
   const percent = progressPercent(optimisticValue, target);
   const remaining = formatRemaining(optimisticValue, unit, target);
+
+  // 단위에 따른 빠른 증감 옵션
+  const quickSteps = unit === "percent" ? [5, 10] : [10, 20, 50];
+
+  function applyQuickStep(step: number) {
+    const maxLimit = target ?? (unit === "percent" ? 100 : Infinity);
+    const base = Number(valInput) || optimisticValue;
+    const next = Math.min(maxLimit, base + step);
+    setValInput(String(next));
+  }
 
   return (
     <div className="mt-2">
@@ -61,29 +78,52 @@ export function QuickProgress({
         />
       </div>
 
-      <form action={formAction} className="mt-2 flex items-center gap-2">
+      <form action={formAction} className="mt-2.5 space-y-2">
         <input type="hidden" name="reading_id" value={readingId} />
-        <input
-          name="value"
-          type="number"
-          min={0}
-          max={target ?? undefined}
-          aria-label={unit === "page" ? "현재 쪽" : "진행률 (%)"}
-          placeholder={unit === "page" ? "현재 쪽" : "%"}
-          className={`w-24 ${input}`}
-        />
-        <input
-          name="minutes"
-          type="number"
-          min={1}
-          max={1440}
-          aria-label="읽은 시간 (분)"
-          placeholder="분"
-          className={`w-20 ${input}`}
-        />
-        <button type="submit" disabled={pending} className={buttonSecondary}>
-          기록
-        </button>
+
+        <div className="flex flex-wrap items-center gap-2">
+          <input
+            name="value"
+            type="number"
+            value={valInput}
+            onChange={(e) => setValInput(e.target.value)}
+            min={0}
+            max={target ?? undefined}
+            aria-label={unit === "page" ? "현재 쪽" : "진행률 (%)"}
+            placeholder={unit === "page" ? "현재 쪽" : "%"}
+            className={`w-24 ${input}`}
+          />
+          <input
+            name="minutes"
+            type="number"
+            value={minInput}
+            onChange={(e) => setMinInput(e.target.value)}
+            min={1}
+            max={1440}
+            aria-label="읽은 시간 (분)"
+            placeholder="분"
+            className={`w-20 ${input}`}
+          />
+          <button type="submit" disabled={pending} className={buttonSecondary}>
+            기록
+          </button>
+
+          {/* 1탭 빠른 진행 증감 버튼 */}
+          <div className="flex items-center gap-1">
+            {quickSteps.map((step) => (
+              <button
+                key={step}
+                type="button"
+                onClick={() => applyQuickStep(step)}
+                title={`현재 진행에 +${step}${unit === "percent" ? "%" : "쪽"} 더하기`}
+                className="bg-secondary text-secondary-foreground hover:bg-accent active:scale-95 inline-flex min-h-8 items-center rounded-lg px-2 text-xs font-mono transition-transform"
+              >
+                +{step}
+                {unit === "percent" ? "%" : "p"}
+              </button>
+            ))}
+          </div>
+        </div>
       </form>
 
       {state.error && (
@@ -94,3 +134,4 @@ export function QuickProgress({
     </div>
   );
 }
+

@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { IBM_Plex_Mono } from "next/font/google";
+import { BottomNav } from "@/components/bottom-nav";
 import { ServiceWorkerRegistrar } from "@/components/service-worker";
 import { THEME_CLASS } from "@/lib/theme";
 
@@ -67,7 +68,7 @@ export default function RootLayout({
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
-      <body className="flex min-h-full flex-col">
+      <body className="flex min-h-full flex-col pb-16 sm:pb-0">
         {/*
           키보드로 들어온 사람이 화면마다 반복되는 네비게이션을 매번 지나치지
           않도록 한다. 평소에는 감춰져 있다가 탭으로 포커스가 오면 나타난다.
@@ -79,8 +80,10 @@ export default function RootLayout({
           본문 바로가기
         </a>
         {children}
+        <BottomNav />
         <ServiceWorkerRegistrar />
       </body>
     </html>
   );
 }
+

@@ -14,6 +14,7 @@ import {
 } from "@/lib/reading-status";
 import { formatNoteLocation, formatRating, NOTE_KIND_LABEL, type NoteKind } from "@/lib/reviews";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { BookCover } from "@/components/book-cover";
 import { ConfirmSubmit } from "@/components/confirm-submit";
 import { HomeIcon } from "@/components/ui/icons";
 import { card, dangerLink, quietLink } from "@/components/ui/styles";
@@ -116,17 +117,13 @@ export default async function BookDetailPage({ params }: { params: Promise<{ id:
         </Link>
 
         <div className="mt-6 flex gap-5">
-          {book.cover_url && (
-            // 표지는 외부 도메인이라 next/image 대신 img를 쓴다.
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={book.cover_url}
-              alt=""
-              loading="lazy"
-              decoding="async"
-              className="bg-muted h-36 w-24 shrink-0 rounded-sm object-cover"
-            />
-          )}
+          <BookCover
+            title={book.title}
+            coverUrl={book.cover_url}
+            categoryColorVal={book.categories?.color}
+            categorySortOrder={book.categories?.sort_order ?? 0}
+            className="h-36 w-24 shrink-0 rounded-sm shadow-xs"
+          />
           <div className="min-w-0">
             <h1 className="text-foreground text-2xl font-semibold tracking-tight">{book.title}</h1>
             {book.subtitle && <p className="text-muted-foreground mt-1 text-sm">{book.subtitle}</p>}

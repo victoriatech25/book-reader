@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
+import { BookCover } from "@/components/book-cover";
 import { BrandMark } from "@/components/brand-mark";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { LibraryIcon, SettingsIcon } from "@/components/ui/icons";
@@ -67,20 +68,11 @@ function CoverRow({
             title={book.title}
             className="block rounded-sm transition-transform active:scale-[0.97]"
           >
-            {book.coverUrl ? (
-              // 표지는 외부 도메인이라 next/image 대신 img를 쓴다 (서재와 같은 이유).
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={book.coverUrl}
-                alt=""
-                loading="lazy"
-                decoding="async"
-                className="aspect-[2/3] w-full rounded-sm object-cover"
-              />
-            ) : (
-              // 표지가 없는 책도 자리는 지킨다. 빠지면 줄이 어긋나 순서를 잃는다.
-              <span className="bg-muted block aspect-[2/3] w-full rounded-sm" />
-            )}
+            <BookCover
+              title={book.title}
+              coverUrl={book.coverUrl}
+              className="aspect-[2/3] w-full rounded-sm shadow-xs"
+            />
           </Link>
         </li>
       ))}

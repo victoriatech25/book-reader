@@ -3,8 +3,11 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 
+import { BookCover } from "@/components/book-cover";
+import { CrossIcon, SearchIcon } from "@/components/ui/icons";
 import { Select } from "@/components/ui/select";
 import {
+  buttonPrimary,
   input,
   quietLink,
   segmentItem,
@@ -50,24 +53,6 @@ function CategoryBadge({ book }: { book: LibraryBook }) {
   );
 }
 
-function Cover({ book, className }: { book: LibraryBook; className: string }) {
-  // 표지가 없을 때의 자리. block을 반드시 준다 — span은 inline이라
-  // aspect-ratio와 w-full이 먹지 않고, 그리드에서 높이가 0이 된다.
-  // 리스트는 부모가 flex라 우연히 가려져 있었다.
-  if (!book.coverUrl) return <span className={`bg-muted block ${className}`} />;
-  return (
-    // 표지는 외부 도메인이라 next/image 대신 img를 쓴다.
-    // eslint-disable-next-line @next/next/no-img-element
-    <img
-      src={book.coverUrl}
-      alt=""
-      loading="lazy"
-      decoding="async"
-      className={`object-cover ${className}`}
-    />
-  );
-}
-
 function ProgressBar({ book }: { book: LibraryBook }) {
   const percent = progressPercent(book.currentValue, book.targetValue);
   return (
@@ -84,7 +69,13 @@ function GridCard({ book }: { book: LibraryBook }) {
         href={`/books/${book.id}`}
         className="hover:bg-accent block rounded-lg p-2 transition-colors"
       >
-        <Cover book={book} className="aspect-[2/3] w-full rounded-sm" />
+        <BookCover
+          title={book.title}
+          coverUrl={book.coverUrl}
+          categoryColorVal={book.categoryColor}
+          categorySortOrder={book.categorySortOrder}
+          className="aspect-[2/3] w-full rounded-sm"
+        />
         <span className="text-foreground mt-2 block truncate font-serif text-sm font-medium">
           {book.title}
         </span>
@@ -109,7 +100,14 @@ function ListRow({ book }: { book: LibraryBook }) {
         href={`/books/${book.id}`}
         className="hover:bg-accent flex flex-wrap gap-x-4 gap-y-2 rounded-md px-2 py-3 transition-colors"
       >
-        <Cover book={book} className="h-20 w-14 shrink-0 rounded-sm" />
+        <BookCover
+          title={book.title}
+          coverUrl={book.coverUrl}
+          categoryColorVal={book.categoryColor}
+          categorySortOrder={book.categorySortOrder}
+          className="h-20 w-14 shrink-0 rounded-sm"
+        />
+
 
         <span className="min-w-0 flex-1 basis-48">
           <span className="flex flex-wrap items-baseline gap-x-2">
@@ -191,16 +189,34 @@ export function LibraryView({
   const years = useMemo(() => finishedYears(books), [books]);
   const tags = useMemo(() => usedTags(books), [books]);
 
+  const activeCategoryName = categories.find((c) => c.id === filter.categoryId)?.name;
+
   return (
     <div>
-      <input
-        type="search"
-        value={filter.keyword}
-        onChange={(event) => patch({ keyword: event.target.value })}
-        aria-label="서재 검색"
-        placeholder="제목 · 저자 · 출판사 · 태그로 검색"
-        className={`w-full ${input}`}
-      />
+      {/* 검색 입력창 (돋보기 아이콘 + 클리어 버튼) */}
+      <div className="relative flex items-center">
+        <span className="text-muted-foreground/70 pointer-events-none absolute left-3.5 flex items-center">
+          <SearchIcon className="size-4" />
+        </span>
+        <input
+          type="search"
+          value={filter.keyword}
+          onChange={(event) => patch({ keyword: event.target.value })}
+          aria-label="서재 검색"
+          placeholder="제목 · 저자 · 출판사 · 태그로 검색"
+          className={`w-full pr-9 pl-10 ${input}`}
+        />
+        {filter.keyword && (
+          <button
+            type="button"
+            aria-label="검색어 지우기"
+            onClick={() => patch({ keyword: "" })}
+            className="text-muted-foreground hover:text-foreground absolute right-3 flex size-5 items-center justify-center rounded-full p-0.5 transition-colors"
+          >
+            <CrossIcon className="size-3.5" />
+          </button>
+        )}
+      </div>
 
       {/* 밑줄 탭 대신 알약. 좁은 화면에서는 줄바꿈 없이 옆으로 밀린다. */}
       <div className={`mt-5 ${segmentTrack}`}>
@@ -223,6 +239,76 @@ export function LibraryView({
           );
         })}
       </div>
+
+      {/* 활성 필터 칩 바 */}
+      {hasActiveFilter(filter) && (
+        <div className="mt-3 flex flex-wrap items-center gap-1.5 pt-1">
+          <span className="text-muted-foreground text-xs font-medium">적용된 필터:</span>
+
+          {filter.keyword && (
+            <button
+              type="button"
+              onClick={() => patch({ keyword: "" })}
+              className="bg-secondary text-secondary-foreground hover:bg-accent inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs transition-colors"
+            >
+              검색: &quot;{filter.keyword}&quot;
+              <CrossIcon className="size-3 opacity-60 hover:opacity-100" />
+            </button>
+          )}
+
+          {activeCategoryName && (
+            <button
+              type="button"
+              onClick={() => patch({ categoryId: null })}
+              className="bg-secondary text-secondary-foreground hover:bg-accent inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs transition-colors"
+            >
+              분야: {activeCategoryName}
+              <CrossIcon className="size-3 opacity-60 hover:opacity-100" />
+            </button>
+          )}
+
+          {filter.tag && (
+            <button
+              type="button"
+              onClick={() => patch({ tag: null })}
+              className="bg-secondary text-secondary-foreground hover:bg-accent inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs transition-colors"
+            >
+              태그: #{filter.tag}
+              <CrossIcon className="size-3 opacity-60 hover:opacity-100" />
+            </button>
+          )}
+
+          {filter.minRating !== null && (
+            <button
+              type="button"
+              onClick={() => patch({ minRating: null })}
+              className="bg-secondary text-secondary-foreground hover:bg-accent inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs transition-colors"
+            >
+              별점: ★ {filter.minRating.toFixed(1)} 이상
+              <CrossIcon className="size-3 opacity-60 hover:opacity-100" />
+            </button>
+          )}
+
+          {filter.year && (
+            <button
+              type="button"
+              onClick={() => patch({ year: null })}
+              className="bg-secondary text-secondary-foreground hover:bg-accent inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs transition-colors"
+            >
+              연도: {filter.year}년
+              <CrossIcon className="size-3 opacity-60 hover:opacity-100" />
+            </button>
+          )}
+
+          <button
+            type="button"
+            onClick={() => setFilter(EMPTY_FILTER)}
+            className="text-muted-foreground hover:text-foreground ml-1 text-xs underline underline-offset-2 transition-colors"
+          >
+            모두 초기화
+          </button>
+        </div>
+      )}
 
       <div className="mt-5 lg:grid lg:grid-cols-[190px_1fr] lg:gap-8">
         {/* 데스크톱은 사이드바, 모바일은 위에 깔린다 (PRD §4) */}
@@ -301,7 +387,7 @@ export function LibraryView({
               onClick={() => setFilter(EMPTY_FILTER)}
               className={`${quietLink} text-xs lg:mt-1 lg:text-left`}
             >
-              필터 지우기
+              필터 초기화
             </button>
           )}
         </aside>
@@ -331,11 +417,33 @@ export function LibraryView({
           </div>
 
           {visible.length === 0 ? (
-            <p className="text-muted-foreground mt-8 text-sm">
-              {books.length === 0
-                ? "아직 등록한 책이 없습니다."
-                : "조건에 맞는 책이 없습니다. 필터를 지워보세요."}
-            </p>
+            <div className="border-border/60 bg-card/50 mt-6 flex flex-col items-center justify-center rounded-2xl border p-8 text-center">
+              <p className="text-foreground font-serif text-base font-medium">
+                {books.length === 0
+                  ? "아직 서재에 등록된 책이 없습니다."
+                  : "조건에 맞는 책을 찾을 수 없습니다."}
+              </p>
+              <p className="text-muted-foreground mt-1.5 text-xs">
+                {books.length === 0
+                  ? "읽고 싶은 책이나 읽고 있는 책을 등록해 보세요."
+                  : "검색어나 필터 조건을 변경하거나 초기화해 보세요."}
+              </p>
+              <div className="mt-4">
+                {books.length === 0 ? (
+                  <Link href="/books/new" className={buttonPrimary}>
+                    첫 책 등록하기
+                  </Link>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setFilter(EMPTY_FILTER)}
+                    className={buttonPrimary}
+                  >
+                    필터 전체 초기화
+                  </button>
+                )}
+              </div>
+            </div>
           ) : view === "grid" ? (
             <ul className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
               {visible.map((book) => (
@@ -354,3 +462,4 @@ export function LibraryView({
     </div>
   );
 }
+
