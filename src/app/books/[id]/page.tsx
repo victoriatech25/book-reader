@@ -25,6 +25,7 @@ import { NoteForm } from "./note-form";
 import { ProgressForm } from "./progress-form";
 import { NewAttemptButton, ReadingActions } from "./reading-actions";
 import { ShelfPicker } from "./shelf-picker";
+import { TotalPagesForm } from "./total-pages-form";
 import { UnitSwitch } from "./unit-switch";
 
 export default async function BookDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -124,16 +125,16 @@ export default async function BookDetailPage({ params }: { params: Promise<{ id:
             categorySortOrder={book.categories?.sort_order ?? 0}
             className="h-36 w-24 shrink-0 rounded-sm shadow-xs"
           />
-          <div className="min-w-0">
+          <div className="min-w-0 flex-1">
             <h1 className="text-foreground text-2xl font-semibold tracking-tight">{book.title}</h1>
             {book.subtitle && <p className="text-muted-foreground mt-1 text-sm">{book.subtitle}</p>}
             <p className="text-muted-foreground mt-2 text-sm">{meta.join(" · ")}</p>
             <p className="text-muted-foreground mt-2 font-mono text-xs">
               {FORMAT_LABEL[book.format as keyof typeof FORMAT_LABEL]} ·{" "}
               {OWNERSHIP_LABEL[book.ownership as keyof typeof OWNERSHIP_LABEL]}
-              {book.total_pages ? ` · ${book.total_pages}쪽` : ""}
               {book.isbn13 ? ` · ${book.isbn13}` : ""}
             </p>
+            <TotalPagesForm bookId={book.id} totalPages={book.total_pages} />
           </div>
         </div>
 

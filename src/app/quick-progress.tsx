@@ -68,8 +68,13 @@ export function QuickProgress({
         <span className="text-muted-foreground font-mono text-xs">
           {formatProgress(optimisticValue, unit, target)}
         </span>
-        {remaining && <span className="text-muted-foreground font-mono text-xs">{remaining}</span>}
+        {unit === "page" ? (
+          <span className="text-muted-foreground font-mono text-xs">{percent}%</span>
+        ) : (
+          remaining && <span className="text-muted-foreground font-mono text-xs">{remaining}</span>
+        )}
       </div>
+
 
       <div className="bg-muted mt-1.5 h-1.5 w-full overflow-hidden rounded-full">
         <div

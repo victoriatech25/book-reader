@@ -619,3 +619,86 @@ export async function startNewAttemptAction(
   revalidatePath(`/books/${bookId}`);
   return ACTION_IDLE;
 }
+
+/**
+ * 책의 전체 페이지수를 등록하거나 수정한다.
+ *
+ * 전체 페이지수가 입력되면 진행 중인 회차의 단위와 목표치를 자동으로 쪽(page) 단위로 맞추고,
+ * 비우면 %(percent) 단위로 안전하게 전환한다.
+ */
+export async function updateTotalPagesAction(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const { supabase } = await requireUser();
+
+  const bookId = formData.get("book_id");
+  if (typeof bookId !== "string") return { error: "잘못된 요청입니다." };
+
+  const rawPages = formData.get("total_pages");
+  const totalPages =
+    rawPages !== null && String(rawPages).trim() !== "" ? Number(String(rawPages).trim()) : null;
+
+  if (
+    totalPages !== null &&
+    (!Number.isInteger(totalPages) || totalPages < 1 || totalPages > 100000)
+  ) {
+    return { error: "전체 페이지수는 1 이상의 올바른 숫자여야 합니다." };
+  }
+
+  // 1. 도서 total_pages 업데이트
+  const { error: bookError } = await supabase
+    .from("books")
+    .update({ total_pages: totalPages })
+    .eq("id", bookId);
+
+  if (bookError) return { error: toMessage(bookError) };
+
+  // 2. 최신 회차(readings)의 단위 및 목표값 동기화
+  const { data: readings } = await supabase
+    .from("readings")
+    .select("id, status, progress_unit, current_value, target_value")
+    .eq("book_id", bookId)
+    .order("attempt_no", { ascending: false })
+    .limit(1);
+
+  const latest = readings?.[0];
+  if (latest && latest.status !== "finished" && latest.status !== "dropped") {
+    if (totalPages !== null && totalPages > 0) {
+      // 퍼센트에서 페이지로 전환 시 진행값 비례 변환
+      let newCurrent = latest.current_value;
+      if (latest.progress_unit === "percent") {
+        newCurrent = Math.min(totalPages, Math.round(totalPages * (latest.current_value / 100)));
+      } else {
+        newCurrent = Math.min(totalPages, latest.current_value);
+      }
+
+      await supabase
+        .from("readings")
+        .update({
+          progress_unit: "page",
+          target_value: totalPages,
+          current_value: newCurrent,
+        })
+        .eq("id", latest.id);
+    } else if (totalPages === null && latest.progress_unit === "page") {
+      // 페이지에서 퍼센트로 전환
+      const oldTarget = latest.target_value || 100;
+      const newCurrent = Math.min(100, Math.round((latest.current_value / oldTarget) * 100));
+
+      await supabase
+        .from("readings")
+        .update({
+          progress_unit: "percent",
+          target_value: 100,
+          current_value: newCurrent,
+        })
+        .eq("id", latest.id);
+    }
+  }
+
+  revalidatePath("/");
+  revalidatePath(`/books/${bookId}`);
+  return ACTION_IDLE;
+}
+
