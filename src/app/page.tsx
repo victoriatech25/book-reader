@@ -127,10 +127,11 @@ export default async function Home() {
     supabase
       .from("readings")
       .select(
-        "id, attempt_no, progress_unit, current_value, target_value, books(id, title, authors)",
+        "id, attempt_no, progress_unit, current_value, target_value, books(id, title, authors, cover_url, category_id, categories(name, color, sort_order))",
       )
       .eq("status", "reading")
       .order("updated_at", { ascending: false }),
+
     supabase.from("goals").select("id, period, period_key, metric, target"),
     supabase
       .from("notes")
@@ -269,23 +270,37 @@ export default async function Home() {
                 <li key={item.id} className={card}>
                   <Link
                     href={`/books/${item.books.id}`}
-                    className="text-foreground font-serif text-base font-medium hover:underline"
+                    className="group flex items-center gap-3.5 transition-colors"
                   >
-                    {item.books.title}
+                    <BookCover
+                      title={item.books.title}
+                      coverUrl={item.books.cover_url}
+                      categoryColorVal={item.books.categories?.color}
+                      categorySortOrder={item.books.categories?.sort_order ?? 0}
+                      className="h-14 w-10 shrink-0 rounded-sm shadow-2xs transition-transform group-hover:scale-[1.02]"
+                    />
+                    <div className="min-w-0 flex-1">
+                      <span className="text-foreground group-hover:text-primary block truncate font-serif text-base font-medium transition-colors">
+                        {item.books.title}
+                      </span>
+                      <span className="text-muted-foreground mt-0.5 block truncate text-xs">
+                        {item.books.authors.join(", ")}
+                        {item.attempt_no > 1 ? ` · ${item.attempt_no}회독` : ""}
+                      </span>
+                    </div>
                   </Link>
-                  <span className="text-muted-foreground ml-2 text-xs">
-                    {item.books.authors.join(", ")}
-                    {item.attempt_no > 1 ? ` · ${item.attempt_no}회독` : ""}
-                  </span>
 
-                  <QuickProgress
-                    readingId={item.id}
-                    unit={item.progress_unit as ProgressUnit}
-                    current={item.current_value}
-                    target={item.target_value}
-                  />
+                  <div className="mt-2 border-t border-border/40 pt-2">
+                    <QuickProgress
+                      readingId={item.id}
+                      unit={item.progress_unit as ProgressUnit}
+                      current={item.current_value}
+                      target={item.target_value}
+                    />
+                  </div>
                 </li>
               ))}
+
             </ul>
           </section>
         )}
