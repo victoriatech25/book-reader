@@ -209,7 +209,9 @@ export async function changeStatusAction(
 
   const { data: reading, error: loadError } = await supabase
     .from("readings")
-    .select("id, book_id, status, started_at, finished_at, dropped_at")
+    .select(
+      "id, book_id, status, started_at, finished_at, dropped_at, progress_unit, current_value, target_value",
+    )
     .eq("id", readingId)
     .single();
 
@@ -232,7 +234,18 @@ export async function changeStatusAction(
     throw error;
   }
 
-  const { error } = await supabase.from("readings").update(patch).eq("id", readingId);
+  // 완독 시 진행률을 100% 또는 목표 페이지수(마지막 페이지)로 채운다.
+  const updateData =
+    to === "finished"
+      ? {
+          ...patch,
+          current_value:
+            reading.target_value ??
+            (reading.progress_unit === "percent" ? 100 : reading.current_value),
+        }
+      : patch;
+
+  const { error } = await supabase.from("readings").update(updateData).eq("id", readingId);
   if (error) return { error: toMessage(error) };
 
   revalidatePath("/");
@@ -280,7 +293,9 @@ export async function finishReadingAction(
 
   const { data: reading, error: loadError } = await supabase
     .from("readings")
-    .select("id, book_id, status, started_at, finished_at, dropped_at")
+    .select(
+      "id, book_id, status, started_at, finished_at, dropped_at, progress_unit, current_value, target_value",
+    )
     .eq("id", readingId)
     .single();
 
@@ -302,10 +317,15 @@ export async function finishReadingAction(
     throw error;
   }
 
+  // 완독 시 진행률을 100% 또는 목표 페이지수(마지막 페이지)로 채운다.
+  const finalValue =
+    reading.target_value ?? (reading.progress_unit === "percent" ? 100 : reading.current_value);
+
   const { error } = await supabase
     .from("readings")
-    .update({ ...patch, ...parsed.fields })
+    .update({ ...patch, ...parsed.fields, current_value: finalValue })
     .eq("id", readingId);
+
 
   if (error) return { error: toMessage(error) };
 
