@@ -168,10 +168,53 @@ export async function updateBookAction(
   const { error: tagError } = await syncBookTags(supabase, user.id, bookId, tagNames);
   if (tagError) return { error: tagError };
 
+  // total_pages가 변경되었을 때 최신 활성 회차(readings)의 단위 및 목표값 동기화
+  const totalPages = input.total_pages ?? null;
+  const { data: readings } = await supabase
+    .from("readings")
+    .select("id, status, progress_unit, current_value, target_value")
+    .eq("book_id", bookId)
+    .order("attempt_no", { ascending: false })
+    .limit(1);
+
+  const latest = readings?.[0];
+  if (latest && latest.status !== "finished" && latest.status !== "dropped") {
+    if (totalPages !== null && totalPages > 0) {
+      let newCurrent = latest.current_value;
+      if (latest.progress_unit === "percent") {
+        newCurrent = Math.min(totalPages, Math.round(totalPages * (latest.current_value / 100)));
+      } else {
+        newCurrent = Math.min(totalPages, latest.current_value);
+      }
+
+      await supabase
+        .from("readings")
+        .update({
+          progress_unit: "page",
+          target_value: totalPages,
+          current_value: newCurrent,
+        })
+        .eq("id", latest.id);
+    } else if (totalPages === null && latest.progress_unit === "page") {
+      const oldTarget = latest.target_value || 100;
+      const newCurrent = Math.min(100, Math.round((latest.current_value / oldTarget) * 100));
+
+      await supabase
+        .from("readings")
+        .update({
+          progress_unit: "percent",
+          target_value: 100,
+          current_value: newCurrent,
+        })
+        .eq("id", latest.id);
+    }
+  }
+
   revalidatePath("/");
   revalidatePath(`/books/${bookId}`);
   redirect(`/books/${bookId}`);
 }
+
 
 export async function deleteBookAction(formData: FormData): Promise<void> {
   const { supabase } = await requireUser();

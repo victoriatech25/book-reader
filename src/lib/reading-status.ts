@@ -133,15 +133,16 @@ export type ProgressUnit = "percent" | "page";
 /**
  * 새 독서 시도의 진행률 단위를 정한다 (PRD §2.1 C).
  *
- * 전자책은 리더마다 페이지 표기가 달라 %로 센다. 종이책이라도 페이지수를
- * 모르면 %로 시작한다 — 위시리스트 단계에서 분량을 모른다고 등록을 막지 않는다.
+ * 페이지수가 등록되어 있으면 형태와 무관하게 쪽(page) 단위로 센다.
+ * 페이지수를 모르면 %(percent)로 시작한다 — 위시리스트나 전자책 등록을 막지 않는다.
  */
-export function initialProgress(book: { format: string; total_pages: number | null }): {
+export function initialProgress(book: { format?: string; total_pages: number | null }): {
   progress_unit: ProgressUnit;
   target_value: number;
 } {
-  if (book.format === "paper" && book.total_pages && book.total_pages > 0) {
+  if (book.total_pages && book.total_pages > 0) {
     return { progress_unit: "page", target_value: book.total_pages };
   }
   return { progress_unit: "percent", target_value: 100 };
 }
+

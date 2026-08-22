@@ -163,27 +163,29 @@ describe("transitionLabel", () => {
 });
 
 describe("initialProgress", () => {
-  it("전자책은 퍼센트로 센다", () => {
+  it("페이지수를 아는 책은 페이지로 센다 (전자책/종이책 무관)", () => {
     expect(initialProgress({ format: "ebook", total_pages: 320 })).toEqual({
-      progress_unit: "percent",
-      target_value: 100,
-    });
-  });
-
-  it("페이지수를 아는 종이책은 페이지로 센다", () => {
-    expect(initialProgress({ format: "paper", total_pages: 320 })).toEqual({
       progress_unit: "page",
       target_value: 320,
+    });
+    expect(initialProgress({ format: "paper", total_pages: 450 })).toEqual({
+      progress_unit: "page",
+      target_value: 450,
     });
   });
 
   it.each([null, 0])(
-    "페이지수가 %s 인 종이책은 퍼센트로 시작한다 — 등록을 막지 않는다",
+    "페이지수가 %s 인 책은 퍼센트로 시작한다 — 등록을 막지 않는다",
     (totalPages) => {
       expect(initialProgress({ format: "paper", total_pages: totalPages })).toEqual({
+        progress_unit: "percent",
+        target_value: 100,
+      });
+      expect(initialProgress({ format: "ebook", total_pages: totalPages })).toEqual({
         progress_unit: "percent",
         target_value: 100,
       });
     },
   );
 });
+
