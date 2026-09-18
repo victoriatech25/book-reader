@@ -2,6 +2,8 @@
 
 import { useEffect } from "react";
 
+import { BASE_PATH, withBasePath } from "@/lib/config";
+
 /**
  * 서비스워커 등록 (PRD §3.2 F16).
  *
@@ -16,9 +18,11 @@ export function ServiceWorkerRegistrar() {
     // 첫 화면이 그려진 뒤에 등록한다. 등록 자체가 첫 렌더와 대역폭을 다투지
     // 않게 한다.
     const register = () => {
-      void navigator.serviceWorker.register("/sw.js").catch((error) => {
-        console.error("[sw] 등록 실패", error);
-      });
+      void navigator.serviceWorker
+        .register(withBasePath("/sw.js"), { scope: `${BASE_PATH}/` })
+        .catch((error) => {
+          console.error("[sw] 등록 실패", error);
+        });
     };
 
     if (document.readyState === "complete") register();

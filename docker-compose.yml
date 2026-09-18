@@ -1,0 +1,30 @@
+# 독서대 운영 구성 (EC2 i-0939aa0c7a548c785, victoria-tech.com/reader).
+#
+# 이미지는 서버에서 빌드하지 않는다. 디스크 여유가 2GB 남짓이라 Next 빌드가
+# 들어가지 않는다. 로컬(또는 CI)에서 linux/amd64 로 만들어 ghcr 에 올리고
+# 서버는 받기만 한다. 로컬 개발용으로 build 블록은 남겨 둔다.
+#
+# 값은 같은 디렉터리의 .env 에서 읽는다. 이 파일에 비밀을 적지 않는다.
+#   docs/EC2_DEPLOYMENT_GUIDE.md 참조
+
+services:
+  book-reader:
+    image: ${BOOK_READER_IMAGE:-book-reader:local}
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL}
+        NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY}
+    container_name: book-reader
+    restart: unless-stopped
+    ports:
+      # 3000·3001·5000 은 같은 인스턴스의 다른 앱이 쓴다. 호스트 3100 → 컨테이너 3000.
+      # 127.0.0.1 로만 게시한다. 바깥에서는 CloudFront → nginx → 여기 순서로만 닿는다.
+      - "127.0.0.1:3100:3000"
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - TZ=Asia/Seoul

@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 
+import { BASE_PATH } from "@/lib/config";
 import { updateSession, withCookiesFrom } from "@/lib/supabase/middleware";
 
 /** 로그인 없이 접근할 수 있는 경로 */
@@ -23,17 +24,25 @@ const PUBLIC_PATHS = [
   "/sw.js",
 ];
 
+function normalizePath(pathname: string): string {
+  if (pathname === BASE_PATH) return "/";
+  if (pathname.startsWith(`${BASE_PATH}/`)) return pathname.slice(BASE_PATH.length);
+  return pathname;
+}
+
 function isPublic(pathname: string): boolean {
-  return PUBLIC_PATHS.some((path) => pathname === path || pathname.startsWith(`${path}/`));
+  const norm = normalizePath(pathname);
+  return PUBLIC_PATHS.some((path) => norm === path || norm.startsWith(`${path}/`));
 }
 
 export async function proxy(request: NextRequest) {
   const { response, user } = await updateSession(request);
   const { pathname, search } = request.nextUrl;
+  const currentPath = normalizePath(pathname);
 
   if (isPublic(pathname)) {
     // 이미 로그인한 사용자가 로그인 페이지에 오면 홈으로 보낸다.
-    if (user && pathname === "/login") {
+    if (user && currentPath === "/login") {
       const home = request.nextUrl.clone();
       home.pathname = "/";
       home.search = "";
@@ -45,7 +54,7 @@ export async function proxy(request: NextRequest) {
   if (!user) {
     // API는 리다이렉트 대신 401을 준다. fetch 호출자가 로그인 HTML을
     // 성공 응답으로 오해하면 안 된다.
-    if (pathname.startsWith("/api/")) {
+    if (currentPath.startsWith("/api/")) {
       return withCookiesFrom(
         NextResponse.json(
           { error: { code: "UNAUTHENTICATED", message: "로그인이 필요합니다." } },
@@ -58,7 +67,7 @@ export async function proxy(request: NextRequest) {
     const login = request.nextUrl.clone();
     login.pathname = "/login";
     login.search = "";
-    login.searchParams.set("next", `${pathname}${search}`);
+    login.searchParams.set("next", `${currentPath}${search}`);
     return withCookiesFrom(NextResponse.redirect(login), response);
   }
 

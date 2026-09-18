@@ -2,6 +2,7 @@ import type { EmailOtpType } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
 
 import { sanitizeNextPath } from "@/lib/auth/redirect";
+import { withBasePath } from "@/lib/config";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 const OTP_TYPES: EmailOtpType[] = ["magiclink", "signup", "invite", "recovery", "email_change"];
@@ -27,7 +28,7 @@ export async function GET(request: Request) {
   const code = searchParams.get("code");
   if (code) {
     const { error } = await supabase.auth.exchangeCodeForSession(code);
-    if (!error) return NextResponse.redirect(new URL(next, origin));
+    if (!error) return NextResponse.redirect(new URL(withBasePath(next), origin));
     console.error(`[auth/confirm] exchangeCodeForSession: ${error.message}`);
   }
 
@@ -35,9 +36,9 @@ export async function GET(request: Request) {
   const type = searchParams.get("type");
   if (tokenHash && isOtpType(type)) {
     const { error } = await supabase.auth.verifyOtp({ type, token_hash: tokenHash });
-    if (!error) return NextResponse.redirect(new URL(next, origin));
+    if (!error) return NextResponse.redirect(new URL(withBasePath(next), origin));
     console.error(`[auth/confirm] verifyOtp: ${error.message}`);
   }
 
-  return NextResponse.redirect(new URL("/login?error=link_invalid", origin));
+  return NextResponse.redirect(new URL(withBasePath("/login?error=link_invalid"), origin));
 }

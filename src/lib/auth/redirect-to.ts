@@ -12,8 +12,10 @@
  * 없으면 오류 없이 Site URL로 갈아끼워져서, 로그인은 되는데 엉뚱한 도메인에
  * 세션이 생긴다 — 배포 도메인이 바뀌면 목록부터 확인한다.
  */
+import { withBasePath } from "@/lib/config";
+
 export function authRedirectTo(origin: string, next: string): string {
-  const url = new URL("/auth/confirm", origin);
+  const url = new URL(withBasePath("/auth/confirm"), origin);
   url.searchParams.set("next", next);
   return url.toString();
 }

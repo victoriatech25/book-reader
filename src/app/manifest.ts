@@ -1,5 +1,7 @@
 import type { MetadataRoute } from "next";
 
+import { withBasePath } from "@/lib/config";
+
 /**
  * 웹 앱 매니페스트 (PRD §3.2 F16).
  *
@@ -14,16 +16,16 @@ export default function manifest(): MetadataRoute.Manifest {
     name: "독서대 — 독서 기록",
     short_name: "독서대",
     description: "읽는 책의 진행 상태와 한 줄 소감을 기록하는 개인 독서 관리 앱",
-    start_url: "/",
+    start_url: withBasePath("/"),
     display: "standalone",
     background_color: "#faf9f7",
     theme_color: "#faf9f7",
     lang: "ko",
     orientation: "portrait",
     icons: [
-      { src: "/icons/192", sizes: "192x192", type: "image/png", purpose: "any" },
-      { src: "/icons/512", sizes: "512x512", type: "image/png", purpose: "any" },
-      { src: "/icons/512", sizes: "512x512", type: "image/png", purpose: "maskable" },
+      { src: withBasePath("/icons/192"), sizes: "192x192", type: "image/png", purpose: "any" },
+      { src: withBasePath("/icons/512"), sizes: "512x512", type: "image/png", purpose: "any" },
+      { src: withBasePath("/icons/512"), sizes: "512x512", type: "image/png", purpose: "maskable" },
     ],
   };
 }

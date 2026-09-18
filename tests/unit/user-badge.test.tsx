@@ -16,7 +16,7 @@ describe("UserBadge", () => {
     const form = container.querySelector("form");
 
     expect(form).toHaveAttribute("method", "post");
-    expect(form).toHaveAttribute("action", "/auth/signout");
+    expect(form).toHaveAttribute("action", "/reader/auth/signout");
     expect(screen.getByRole("button", { name: "로그아웃" })).toBeInTheDocument();
   });
 });

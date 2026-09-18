@@ -19,7 +19,7 @@
 const VERSION = "v1";
 const STATIC_CACHE = `book-reader-static-${VERSION}`;
 const PAGE_CACHE = `book-reader-pages-${VERSION}`;
-const OFFLINE_URL = "/offline";
+const OFFLINE_URL = "/reader/offline";
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
@@ -53,7 +53,12 @@ self.addEventListener("message", (event) => {
 });
 
 function isStaticAsset(url) {
-  return url.pathname.startsWith("/_next/static") || url.pathname.startsWith("/icons/");
+  return (
+    url.pathname.startsWith("/reader/_next/static") ||
+    url.pathname.startsWith("/reader/icons/") ||
+    url.pathname.startsWith("/_next/static") ||
+    url.pathname.startsWith("/icons/")
+  );
 }
 
 self.addEventListener("fetch", (event) => {
@@ -66,7 +71,13 @@ self.addEventListener("fetch", (event) => {
   if (url.origin !== self.location.origin) return;
 
   // 인증·데이터 경로는 항상 네트워크로. 캐시에 남기지 않는다.
-  if (url.pathname.startsWith("/api/") || url.pathname.startsWith("/auth/")) return;
+  if (
+    url.pathname.startsWith("/reader/api/") ||
+    url.pathname.startsWith("/reader/auth/") ||
+    url.pathname.startsWith("/api/") ||
+    url.pathname.startsWith("/auth/")
+  )
+    return;
 
   if (isStaticAsset(url)) {
     // 해시가 붙은 산출물이라 한 번 받으면 바뀌지 않는다.

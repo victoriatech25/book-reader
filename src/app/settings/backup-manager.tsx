@@ -6,6 +6,7 @@ import { ACTION_IDLE } from "@/app/books/action-state";
 import { Select } from "@/components/ui/select";
 import { buttonSecondary, errorText, input, quietLink } from "@/components/ui/styles";
 import { DUPLICATE_POLICIES, DUPLICATE_POLICY_LABEL } from "@/lib/backup/import-plan";
+import { withBasePath } from "@/lib/config";
 
 import { importBackupAction } from "./actions";
 
@@ -27,10 +28,10 @@ export function BackupManager() {
 
       <div className="mt-4 flex flex-wrap items-center gap-4">
         {/* download 속성이 있어야 브라우저가 새 탭 대신 저장으로 간다. */}
-        <a href="/api/backup" download className={buttonSecondary}>
+        <a href={withBasePath("/api/backup")} download className={buttonSecondary}>
           전체 백업 내려받기 (JSON)
         </a>
-        <a href="/api/backup?format=csv" download className={quietLink}>
+        <a href={withBasePath("/api/backup?format=csv")} download className={quietLink}>
           완독 목록 (CSV)
         </a>
       </div>

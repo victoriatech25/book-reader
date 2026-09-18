@@ -1,5 +1,6 @@
 "use client";
 
+import { withBasePath } from "@/lib/config";
 import { clearPageCache } from "./service-worker";
 import { quietLink } from "./ui/styles";
 
@@ -14,7 +15,7 @@ export function UserBadge({ email }: { email: string }) {
       */}
       <span className="text-muted-foreground min-w-0 truncate font-mono text-xs">{email}</span>
       <form
-        action="/auth/signout"
+        action={withBasePath("/auth/signout")}
         method="post"
         className="shrink-0"
         // 방문 기록 캐시에는 이 사람의 서재가 들어 있다. 기기를 나눠 쓸 때

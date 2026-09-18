@@ -6,6 +6,7 @@ import { BookCover } from "@/components/book-cover";
 import { BackIcon, CrossIcon, SearchIcon } from "@/components/ui/icons";
 import { buttonPrimary, errorText, input, quietLink } from "@/components/ui/styles";
 import type { BookSearchItem } from "@/lib/book-search/kakao";
+import { withBasePath } from "@/lib/config";
 
 import { createBookAction } from "../actions";
 import { BookForm, EMPTY_BOOK, type BookDefaults, type CategoryOption } from "../book-form";
@@ -51,7 +52,7 @@ export function NewBookView({
     setSearch({ kind: "searching" });
 
     try {
-      const response = await fetch(`/api/book-search?q=${encodeURIComponent(query.trim())}`);
+      const response = await fetch(withBasePath(`/api/book-search?q=${encodeURIComponent(query.trim())}`));
       const body = await response.json();
 
       if (!response.ok) {
