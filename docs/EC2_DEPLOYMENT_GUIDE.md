@@ -109,3 +109,12 @@ curl -s -o /dev/null -w "%{http_code}\n" https://victoria-tech.com/reader/login 
 curl -s -o /dev/null -w "%{http_code}\n" https://victoria-tech.com/reader            # 307 → /reader/login (미로그인)
 curl -s https://victoria-tech.com/reader/manifest.webmanifest | head -c 200
 ```
+
+## 8. 첫 배포에서 겪은 것 (2026-09-19)
+
+| 증상 | 원인 | 조치 |
+|---|---|---|
+| Google 로그인 후 Vercel 404 | Supabase Redirect URLs 에 새 주소가 없어 Site URL 로 갈아끼움 | §6 설정 |
+| `/auth/confirm` 에서 502 | 세션 쿠키 `Set-Cookie` 가 nginx 기본 프록시 버퍼(4k) 초과 | `reader.conf` 버퍼 32k |
+| `http://0.0.0.0:3000/reader/` 로 리다이렉트 | 컨테이너 안 `request.url` 이 바인딩 주소 | `src/lib/request-origin.ts` — `Host`·`X-Forwarded-Proto` 우선 |
+| 리다이렉트가 `http://` | CloudFront→nginx 가 평문이라 `$scheme` 이 http | `reader.conf` 에서 `X-Forwarded-Proto https` 고정 |
