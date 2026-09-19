@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 
 import { sanitizeNextPath } from "@/lib/auth/redirect";
 import { withBasePath } from "@/lib/config";
+import { requestOrigin } from "@/lib/request-origin";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 const OTP_TYPES: EmailOtpType[] = ["magiclink", "signup", "invite", "recovery", "email_change"];
@@ -20,7 +21,8 @@ function isOtpType(value: string | null): value is EmailOtpType {
  *                    발급한 링크. 브라우저가 달라도 동작한다(E2E가 이 경로를 쓴다).
  */
 export async function GET(request: Request) {
-  const { searchParams, origin } = new URL(request.url);
+  const { searchParams } = new URL(request.url);
+  const origin = requestOrigin(request);
   const next = sanitizeNextPath(searchParams.get("next"));
 
   const supabase = await createServerSupabaseClient();
