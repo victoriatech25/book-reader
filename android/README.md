@@ -79,9 +79,10 @@ PRD 밖의 추가 작업이다(WORKPLAN W13.6). 결정과 확인 내용을 남�
 
 - `apksigner verify` 통과
 - 실기기(LG G900N, Chrome 153)에 설치 → 실행 시 `/reader/login` 화면 표시
-- 주소창 표시 상태 — 서버에 `assetlinks.json` 반영 전이라 예상대로다
+- 서버 nginx 에 `reader.conf` 반영 후 `https://victoria-tech.com/.well-known/assetlinks.json` 200 · `application/json` · 지문 일치
+- 반영 후 앱을 다시 켜기만 해도(재설치 없이) 주소창 없이 전체 화면으로 뜸
+- 앱 안에서 로그인된 상태로 홈 화면(읽는 중 목록) 표시
 
 **남은 것**
 
-- 서버 nginx 에 `reader.conf` 반영 후 주소창 사라지는지 확인
-- 앱 안에서 Google 로그인·매직링크 로그인 실제 확인
+- 로그인 방식별(Google·매직링크) 개별 확인은 따로 하지 않았다

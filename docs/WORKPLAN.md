@@ -179,6 +179,6 @@ graph LR
 - [x] W12 백업 내보내기·가져오기 — V1 · V2 413개 · V3 87개 · V4 70개
 - [x] W13 PWA — V1 · V4 77개 · V5(아이콘·매니페스트 확인)
 - [x] W13.5 이미 읽은 책 소급 등록 (F1b) — V1 · V2 439개 · V4 83개 · V5
-- [x] W13.6 안드로이드 앱 (TWA, PRD 외 추가) — APK 빌드·서명 · 실기기(LG G900N) 설치·실행 확인 · assetlinks 는 서버 반영 대기. [android/README.md](../android/README.md)
+- [x] W13.6 안드로이드 앱 (TWA, PRD 외 추가) — APK 빌드·서명 · 실기기(LG G900N) 설치·실행 · assetlinks 반영 후 전체 화면·로그인 상태 확인. [android/README.md](../android/README.md)
 - [ ] U14 🔑 배포 준비 → **G5**
 - [ ] W14 배포·검증
