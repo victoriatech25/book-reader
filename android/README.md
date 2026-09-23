@@ -54,3 +54,34 @@ cd android && npx @bubblewrap/cli update --skipVersionUpgrade
 
 `bubblewrap build` 는 SDK 에 옛 `tools/` 폴더가 없으면 실패하므로 빌드는 `build-apk.sh` 로 한다.
 Bubblewrap 은 `~/.bubblewrap/config.json` 의 `jdkPath`·`androidSdkPath` 를 쓴다.
+
+## 작업 기록 (2026-09-23)
+
+PRD 밖의 추가 작업이다(WORKPLAN W13.6). 결정과 확인 내용을 남긴다.
+
+**방식 결정**
+
+| 후보                         | 판단 | 이유                                                                                                   |
+| ---------------------------- | ---- | ------------------------------------------------------------------------------------------------------ |
+| 완전 번들형(정적 export)     | 기각 | Server Actions·SSR·API 라우트(카카오 키)·쿠키 인증을 모두 클라이언트로 옮겨야 한다                     |
+| Capacitor WebView + 원격 URL | 기각 | Google OAuth 가 WebView 에서 차단되고, 매직링크는 Chrome 에서 열려 세션이 앱에 안 들어온다             |
+| **TWA (Bubblewrap)**         | 채택 | Chrome 과 쿠키 공유 → 두 로그인 그대로 동작. 웹 코드·의존성 변경 없음. 기존 PWA 매니페스트를 그대로 씀 |
+
+**환경에서 겪은 것**
+
+| 증상                                         | 원인                              | 조치                                                                       |
+| -------------------------------------------- | --------------------------------- | -------------------------------------------------------------------------- |
+| `bubblewrap build`: androidSdk isn't correct | SDK 에 옛 `tools/` 폴더 없음      | 생성은 `bubblewrap update`, 빌드는 `build-apk.sh`                          |
+| AGP requires Java 17                         | 시스템 `JAVA_HOME` 이 JDK 11      | 스크립트가 Android Studio JBR(21) 사용, `ANDROID_JAVA_HOME` 으로 변경 가능 |
+| 에뮬레이터에서 화면 확인 불가                | Chrome 첫 실행 약관 화면에서 멈춤 | 실기기로 확인                                                              |
+
+**확인한 것**
+
+- `apksigner verify` 통과
+- 실기기(LG G900N, Chrome 153)에 설치 → 실행 시 `/reader/login` 화면 표시
+- 주소창 표시 상태 — 서버에 `assetlinks.json` 반영 전이라 예상대로다
+
+**남은 것**
+
+- 서버 nginx 에 `reader.conf` 반영 후 주소창 사라지는지 확인
+- 앱 안에서 Google 로그인·매직링크 로그인 실제 확인

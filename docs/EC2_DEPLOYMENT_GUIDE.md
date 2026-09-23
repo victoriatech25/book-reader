@@ -77,6 +77,8 @@ sudo cp /etc/nginx/sites-enabled/default /etc/nginx/backups/default.$(date +%Y%m
 sudo nginx -t && sudo systemctl reload nginx
 ```
 
+`reader.conf` 에는 `/reader` 외에 도메인 루트의 `/.well-known/assetlinks.json` 응답도 들어 있다. 안드로이드 앱(`android/`, TWA)이 주소창 없이 뜨기 위한 것이다 — [android/README.md](../android/README.md).
+
 ## 5. 배포
 
 서버에는 SSM 으로 지시만 보낸다. SSH 22 는 고정 IP 두 개로만 열려 있다.
@@ -94,12 +96,14 @@ aws ssm send-command --instance-ids i-0939aa0c7a548c785 \
 ## 6. 외부 서비스 설정 (서브패스로 바뀌었으므로 반드시)
 
 ### Supabase — Authentication → URL Configuration
+
 - Site URL: `https://victoria-tech.com/reader`
 - Redirect URLs 에 추가: `https://victoria-tech.com/reader/**`
 
 목록에 없으면 매직링크가 Site URL 로 갈아끼워져 엉뚱한 곳에 세션이 생긴다 (`src/lib/auth/redirect-to.ts` 주석 참조).
 
 ### 카카오 개발자 콘솔 — 앱 설정 → 플랫폼 → Web
+
 - 사이트 도메인에 `https://victoria-tech.com` 추가.
 
 ## 7. 확인
@@ -108,13 +112,14 @@ aws ssm send-command --instance-ids i-0939aa0c7a548c785 \
 curl -s -o /dev/null -w "%{http_code}\n" https://victoria-tech.com/reader/login      # 200
 curl -s -o /dev/null -w "%{http_code}\n" https://victoria-tech.com/reader            # 307 → /reader/login (미로그인)
 curl -s https://victoria-tech.com/reader/manifest.webmanifest | head -c 200
+curl -s https://victoria-tech.com/.well-known/assetlinks.json                         # 안드로이드 앱 지문
 ```
 
 ## 8. 첫 배포에서 겪은 것 (2026-09-19)
 
-| 증상 | 원인 | 조치 |
-|---|---|---|
-| Google 로그인 후 Vercel 404 | Supabase Redirect URLs 에 새 주소가 없어 Site URL 로 갈아끼움 | §6 설정 |
-| `/auth/confirm` 에서 502 | 세션 쿠키 `Set-Cookie` 가 nginx 기본 프록시 버퍼(4k) 초과 | `reader.conf` 버퍼 32k |
-| `http://0.0.0.0:3000/reader/` 로 리다이렉트 | 컨테이너 안 `request.url` 이 바인딩 주소 | `src/lib/request-origin.ts` — `Host`·`X-Forwarded-Proto` 우선 |
-| 리다이렉트가 `http://` | CloudFront→nginx 가 평문이라 `$scheme` 이 http | `reader.conf` 에서 `X-Forwarded-Proto https` 고정 |
+| 증상                                        | 원인                                                          | 조치                                                          |
+| ------------------------------------------- | ------------------------------------------------------------- | ------------------------------------------------------------- |
+| Google 로그인 후 Vercel 404                 | Supabase Redirect URLs 에 새 주소가 없어 Site URL 로 갈아끼움 | §6 설정                                                       |
+| `/auth/confirm` 에서 502                    | 세션 쿠키 `Set-Cookie` 가 nginx 기본 프록시 버퍼(4k) 초과     | `reader.conf` 버퍼 32k                                        |
+| `http://0.0.0.0:3000/reader/` 로 리다이렉트 | 컨테이너 안 `request.url` 이 바인딩 주소                      | `src/lib/request-origin.ts` — `Host`·`X-Forwarded-Proto` 우선 |
+| 리다이렉트가 `http://`                      | CloudFront→nginx 가 평문이라 `$scheme` 이 http                | `reader.conf` 에서 `X-Forwarded-Proto https` 고정             |
