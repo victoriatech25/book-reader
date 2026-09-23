@@ -53,3 +53,13 @@ yarn-error.log*
 .vscode/*
 !.vscode/extensions.json
 !.vscode/settings.json
+
+# android (TWA) — 서명 키와 비밀번호는 절대 커밋하지 않는다
+android/android.keystore
+android/.keystore.env
+android/*.apk
+android/*.apk.idsig
+android/.gradle/
+android/app/build/
+android/build/
+android/local.properties

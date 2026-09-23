@@ -1,0 +1,43 @@
+{
+  "packageId": "com.victoriatech.reader",
+  "host": "victoria-tech.com",
+  "name": "독서대 — 독서 기록",
+  "launcherName": "독서대",
+  "display": "standalone",
+  "orientation": "portrait",
+  "themeColor": "#FAF9F7",
+  "themeColorDark": "#FAF9F7",
+  "navigationColor": "#FAF9F7",
+  "navigationColorDark": "#FAF9F7",
+  "navigationDividerColor": "#FAF9F7",
+  "navigationDividerColorDark": "#FAF9F7",
+  "backgroundColor": "#FAF9F7",
+  "enableNotifications": false,
+  "startUrl": "/reader/",
+  "iconUrl": "https://victoria-tech.com/reader/icons/512",
+  "maskableIconUrl": "https://victoria-tech.com/reader/icons/512",
+  "splashScreenFadeOutDuration": 300,
+  "signingKey": {
+    "path": "android.keystore",
+    "alias": "reader"
+  },
+  "appVersionName": "0.1.0",
+  "appVersionCode": 1,
+  "shortcuts": [],
+  "generatorApp": "bubblewrap-cli",
+  "webManifestUrl": "https://victoria-tech.com/reader/manifest.webmanifest",
+  "fallbackType": "customtabs",
+  "features": {},
+  "alphaDependencies": {
+    "enabled": false
+  },
+  "enableSiteSettingsShortcut": true,
+  "isChromeOSOnly": false,
+  "isMetaQuest": false,
+  "fullScopeUrl": "https://victoria-tech.com/reader/",
+  "minSdkVersion": 21,
+  "fingerprints": [],
+  "additionalTrustedOrigins": [],
+  "retainedBundles": [],
+  "appVersion": "0.1.0"
+}
